@@ -45,9 +45,19 @@ class StepSerializer(serializers.ModelSerializer):
 
 
 class CandidateSerializer(serializers.ModelSerializer):
+    flow_name = serializers.CharField(source="flow.name", read_only=True)
+
     class Meta:
         model = Candidate
-        fields = "__all__"
+        fields = [
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "flow",
+            "flow_name",
+            "created_at",
+        ]
 
 
 class InterviewSerializer(serializers.ModelSerializer):
