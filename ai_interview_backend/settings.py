@@ -143,6 +143,9 @@ APPEND_SLASH = False
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Vite dev server
     "http://127.0.0.1:5173",
+    "http://localhost:5174",  # Vite dev server (alternative port)
+    "http://127.0.0.1:5174",
+    "https://739a-2607-f470-6-1001-c838-5972-c6d9-d6cf.ngrok-free.app",  # Ngrok URL
 ]
 
 CORS_ALLOW_CREDENTIALS = True
