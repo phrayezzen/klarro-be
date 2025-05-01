@@ -26,6 +26,19 @@ class Recruiter(models.Model):
 
 
 class Flow(models.Model):
+    ROLE_CHOICES = [
+        ("business_ops", "Business & Operations"),
+        ("sales_cs", "Sales & Customer Success"),
+        ("marketing_growth", "Marketing & Growth"),
+        ("product_design", "Product & Design"),
+        ("engineering_data", "Engineering & Data"),
+        ("people_hr", "People & HR"),
+        ("finance_legal", "Finance & Legal"),
+        ("support_services", "Support & Services"),
+        ("science_research", "Science & Research"),
+        ("executive_leadership", "Executive & Leadership"),
+    ]
+
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     recruiter = models.ForeignKey(
         Recruiter,
@@ -36,6 +49,8 @@ class Flow(models.Model):
     )
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
