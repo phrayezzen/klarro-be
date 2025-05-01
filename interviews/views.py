@@ -1,18 +1,38 @@
-from django.db.models import Q
-from rest_framework import viewsets
-from rest_framework.decorators import action
+from django.shortcuts import get_object_or_404
+from rest_framework import permissions, viewsets
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Candidate, Flow, Interview, Recruiter
+from .models import Candidate, Flow, Interview, InterviewStep, Recruiter, Step
 from .permissions import IsCompanyMember, IsRecruiter
 from .serializers import (
     CandidateSerializer,
     FlowSerializer,
     InterviewSerializer,
+    InterviewStepSerializer,
     RecruiterSerializer,
     StepSerializer,
+    UserSerializer,
 )
+
+
+class StepViewSet(viewsets.ModelViewSet):
+    queryset = Step.objects.all()
+    serializer_class = StepSerializer
+    permission_classes = [IsAuthenticated, IsRecruiter, IsCompanyMember]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(flow__company_id=self.request.user.recruiter.company_id)
+
+    def perform_create(self, serializer):
+        flow_id = self.request.data.get("flow")
+        flow = Flow.objects.get(id=flow_id)
+        if flow.company_id != self.request.user.recruiter.company_id:
+            raise PermissionDenied("You can only create steps for your company's flows")
+        serializer.save()
 
 
 class RecruiterViewSet(viewsets.ModelViewSet):
@@ -80,21 +100,82 @@ class CandidateViewSet(viewsets.ModelViewSet):
 
 
 class InterviewViewSet(viewsets.ModelViewSet):
-    queryset = Interview.objects.all()
+    """ViewSet for managing interviews."""
+
     serializer_class = InterviewSerializer
-    permission_classes = [IsAuthenticated, IsRecruiter, IsCompanyMember]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        candidate_id = self.request.query_params.get("candidate_id")
-        step_id = self.request.query_params.get("step_id")
+        """Get interviews for the current user."""
+        return Interview.objects.filter(user=self.request.user)
 
-        if candidate_id:
-            queryset = queryset.filter(candidate_id=candidate_id)
-        if step_id:
-            queryset = queryset.filter(step_id=step_id)
+    def perform_create(self, serializer):
+        """Create a new interview."""
+        serializer.save(user=self.request.user)
 
-        return queryset.filter(
-            Q(step__flow__company_id=self.request.user.recruiter.company_id)
-            | Q(interviewer_id=self.request.user.recruiter.id)
-        )
+    def perform_update(self, serializer):
+        """Update an interview."""
+        if serializer.instance.user != self.request.user:
+            raise PermissionDenied(
+                "You don't have permission to update this interview."
+            )
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        """Delete an interview."""
+        if instance.user != self.request.user:
+            raise PermissionDenied(
+                "You don't have permission to delete this interview."
+            )
+        instance.delete()
+
+    @action(detail=True, methods=["post"])
+    def add_step(self, request, pk=None):
+        """Add a step to the interview."""
+        interview = self.get_object()
+        step_data = request.data
+        step_data["interview"] = interview.id
+        serializer = InterviewStepSerializer(data=step_data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+    @action(detail=True, methods=["post"])
+    def remove_step(self, request, pk=None):
+        """Remove a step from the interview."""
+        interview = self.get_object()
+        step_id = request.data.get("step_id")
+        if not step_id:
+            return Response({"error": "step_id is required"}, status=400)
+
+        step = get_object_or_404(InterviewStep, id=step_id, interview=interview)
+        step.delete()
+        return Response(status=204)
+
+    @action(detail=True, methods=["post"])
+    def reorder_steps(self, request, pk=None):
+        """Reorder steps in the interview."""
+        interview = self.get_object()
+        step_ids = request.data.get("step_ids", [])
+        if not step_ids:
+            return Response({"error": "step_ids is required"}, status=400)
+
+        # Verify all steps belong to this interview
+        steps = InterviewStep.objects.filter(id__in=step_ids, interview=interview)
+        if len(steps) != len(step_ids):
+            return Response({"error": "Invalid step IDs"}, status=400)
+
+        # Update order
+        for index, step_id in enumerate(step_ids):
+            InterviewStep.objects.filter(id=step_id).update(order=index)
+
+        return Response(status=200)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_current_user(request):
+    """Get the current authenticated user's data."""
+    serializer = UserSerializer(request.user)
+    return Response(serializer.data)
