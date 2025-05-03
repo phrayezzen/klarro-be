@@ -29,18 +29,29 @@ class RecruiterSerializer(serializers.ModelSerializer):
         fields = ["id", "user", "user_id", "company", "company_id", "created_at"]
 
 
+class StepSerializer(serializers.ModelSerializer):
+    type = serializers.CharField(source="step_type")
+
+    class Meta:
+        model = Step
+        fields = [
+            "id",
+            "name",
+            "description",
+            "type",
+            "duration_minutes",
+            "order",
+            "created_at",
+        ]
+
+
 class FlowSerializer(serializers.ModelSerializer):
     recruiter = RecruiterSerializer(read_only=True)
     recruiter_id = serializers.IntegerField(write_only=True, required=False)
+    steps = StepSerializer(many=True, read_only=True)
 
     class Meta:
         model = Flow
-        fields = "__all__"
-
-
-class StepSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Step
         fields = "__all__"
 
 

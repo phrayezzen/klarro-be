@@ -1,17 +1,18 @@
+from django.db import models
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Candidate, Flow, Interview, InterviewStep, Recruiter, Step
+from .models import Candidate, Flow, Interview, Recruiter, Step
 from .permissions import IsCompanyMember, IsRecruiter
 from .serializers import (
     CandidateSerializer,
     FlowSerializer,
     InterviewSerializer,
-    InterviewStepSerializer,
     RecruiterSerializer,
     StepSerializer,
     UserSerializer,
@@ -78,6 +79,20 @@ class FlowViewSet(viewsets.ModelViewSet):
         serializer = CandidateSerializer(candidates, many=True)
         return Response(serializer.data)
 
+    def retrieve(self, request, *args, **kwargs):
+        print(f"Attempting to retrieve flow with ID: {kwargs.get('pk')}")
+        print(
+            f"User: {request.user.username}, Company ID: {request.user.recruiter.company_id}"
+        )
+        try:
+            instance = self.get_object()
+            print(f"Successfully retrieved flow: {instance.name} (ID: {instance.id})")
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        except Exception as e:
+            print(f"Error retrieving flow: {str(e)}")
+            raise
+
 
 class CandidateViewSet(viewsets.ModelViewSet):
     queryset = Candidate.objects.all()
@@ -89,7 +104,21 @@ class CandidateViewSet(viewsets.ModelViewSet):
         flow_id = self.request.query_params.get("flow_id")
         if flow_id:
             queryset = queryset.filter(flow_id=flow_id)
-        return queryset.filter(flow__company_id=self.request.user.recruiter.company_id)
+        # Only filter by company if the candidate has a flow assigned
+        return queryset.filter(
+            models.Q(flow__company_id=self.request.user.recruiter.company_id)
+            | models.Q(flow__isnull=True)
+        )
+
+    def get_object(self):
+        print("Starting get_object method")
+        obj = super().get_object()
+        print(f"Found object: {obj}")
+        print(f"Object flow: {obj.flow}")
+        if obj.flow:
+            print(f"Flow company: {obj.flow.company}")
+            print(f"Flow company ID: {obj.flow.company_id}")
+        return obj
 
     @action(detail=True, methods=["get"])
     def interviews(self, request, pk=None):
@@ -98,24 +127,68 @@ class CandidateViewSet(viewsets.ModelViewSet):
         serializer = InterviewSerializer(interviews, many=True)
         return Response(serializer.data)
 
+    def retrieve(self, request, *args, **kwargs):
+        print(f"Attempting to retrieve candidate with ID: {kwargs.get('pk')}")
+        print(f"User: {request.user.username}, User ID: {request.user.id}")
+        print(f"User's recruiter ID: {request.user.recruiter.id}")
+        print(f"User's company ID: {request.user.recruiter.company_id}")
+
+        try:
+            # Log the queryset before filtering
+            queryset = self.get_queryset()
+            print(f"Base queryset count: {queryset.count()}")
+            print(f"Queryset SQL: {queryset.query}")
+
+            # Get the specific candidate
+            instance = self.get_object()
+            print(
+                f"Found candidate: {instance.first_name} {instance.last_name} (ID: {instance.id})"
+            )
+
+            if instance.flow:
+                print(f"Candidate flow: {instance.flow.name} (ID: {instance.flow.id})")
+                print(
+                    f"Flow company: {instance.flow.company.name} (ID: {instance.flow.company_id})"
+                )
+                print(
+                    f"Flow recruiter: {instance.flow.recruiter.user.username} (ID: {instance.flow.recruiter_id})"
+                )
+            else:
+                print("Candidate has no flow assigned")
+
+            # Check permissions explicitly
+            for permission in self.get_permissions():
+                print(f"Checking permission: {permission.__class__.__name__}")
+                if not permission.has_object_permission(request, self, instance):
+                    print(f"Permission denied by: {permission.__class__.__name__}")
+                    raise PermissionDenied()
+
+            serializer = self.get_serializer(instance)
+            print("Successfully retrieved and serialized candidate")
+            return Response(serializer.data)
+        except Exception as e:
+            print(f"Error retrieving candidate: {str(e)}")
+            raise
+
 
 class InterviewViewSet(viewsets.ModelViewSet):
     """ViewSet for managing interviews."""
 
+    queryset = Interview.objects.all()
     serializer_class = InterviewSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         """Get interviews for the current user."""
-        return Interview.objects.filter(user=self.request.user)
+        return Interview.objects.filter(interviewer__user=self.request.user)
 
     def perform_create(self, serializer):
         """Create a new interview."""
-        serializer.save(user=self.request.user)
+        serializer.save(interviewer=self.request.user.recruiter)
 
     def perform_update(self, serializer):
         """Update an interview."""
-        if serializer.instance.user != self.request.user:
+        if serializer.instance.interviewer.user != self.request.user:
             raise PermissionDenied(
                 "You don't have permission to update this interview."
             )
@@ -123,54 +196,30 @@ class InterviewViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         """Delete an interview."""
-        if instance.user != self.request.user:
+        if instance.interviewer.user != self.request.user:
             raise PermissionDenied(
                 "You don't have permission to delete this interview."
             )
         instance.delete()
 
     @action(detail=True, methods=["post"])
-    def add_step(self, request, pk=None):
-        """Add a step to the interview."""
+    def update_status(self, request, pk=None):
+        """Update the status of an interview."""
         interview = self.get_object()
-        step_data = request.data
-        step_data["interview"] = interview.id
-        serializer = InterviewStepSerializer(data=step_data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        new_status = request.data.get("status")
+        if not new_status:
+            return Response({"error": "status is required"}, status=400)
 
-    @action(detail=True, methods=["post"])
-    def remove_step(self, request, pk=None):
-        """Remove a step from the interview."""
-        interview = self.get_object()
-        step_id = request.data.get("step_id")
-        if not step_id:
-            return Response({"error": "step_id is required"}, status=400)
+        if new_status not in dict(Interview.STATUS_CHOICES):
+            return Response({"error": "Invalid status"}, status=400)
 
-        step = get_object_or_404(InterviewStep, id=step_id, interview=interview)
-        step.delete()
-        return Response(status=204)
+        interview.status = new_status
+        if new_status == "completed":
+            interview.completed_at = timezone.now()
+        interview.save()
 
-    @action(detail=True, methods=["post"])
-    def reorder_steps(self, request, pk=None):
-        """Reorder steps in the interview."""
-        interview = self.get_object()
-        step_ids = request.data.get("step_ids", [])
-        if not step_ids:
-            return Response({"error": "step_ids is required"}, status=400)
-
-        # Verify all steps belong to this interview
-        steps = InterviewStep.objects.filter(id__in=step_ids, interview=interview)
-        if len(steps) != len(step_ids):
-            return Response({"error": "Invalid step IDs"}, status=400)
-
-        # Update order
-        for index, step_id in enumerate(step_ids):
-            InterviewStep.objects.filter(id=step_id).update(order=index)
-
-        return Response(status=200)
+        serializer = self.get_serializer(interview)
+        return Response(serializer.data)
 
 
 @api_view(["GET"])
