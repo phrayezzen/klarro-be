@@ -52,13 +52,26 @@ class FlowSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Flow
-        fields = "__all__"
+        fields = [
+            "id",
+            "company",
+            "recruiter",
+            "recruiter_id",
+            "role_name",
+            "role_description",
+            "role_function",
+            "location",
+            "is_remote_allowed",
+            "is_active",
+            "created_at",
+            "steps",
+        ]
 
 
 class CandidateSerializer(serializers.ModelSerializer):
-    flow_name = serializers.CharField(source="flow.name", read_only=True)
+    flow_name = serializers.CharField(source="flow.role_name", read_only=True)
     profile_picture_url = serializers.SerializerMethodField()
-    interview_status = serializers.SerializerMethodField()
+    interview_status = serializers.CharField(source="status", read_only=True)
     job_match_score = serializers.SerializerMethodField()
     experience_score = serializers.SerializerMethodField()
     education_score = serializers.SerializerMethodField()
@@ -99,9 +112,6 @@ class CandidateSerializer(serializers.ModelSerializer):
 
     def get_profile_picture_url(self, obj):
         return f"https://ui-avatars.com/api/?name={obj.first_name}+{obj.last_name}"
-
-    def get_interview_status(self, obj):
-        return "in_progress"
 
     def get_job_match_score(self, obj):
         return 85.5

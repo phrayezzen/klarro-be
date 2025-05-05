@@ -44,40 +44,19 @@ class IsCompanyMember(permissions.BasePermission):
     """Check if the user is a member (admin or recruiter) of the company."""
 
     def has_permission(self, request, view):
-        print(
-            f"Checking IsCompanyMember base permission for user: {request.user.username}"
-        )
-        is_authenticated = request.user and request.user.is_authenticated
-        print(f"Is authenticated: {is_authenticated}")
-        return is_authenticated
+        return request.user and request.user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
-        print(f"Checking IsCompanyMember permission for user: {request.user.username}")
-        print(f"Object type: {type(obj).__name__}")
-        print(f"Object ID: {obj.id}")
-
         # Get the company ID from the object
         if hasattr(obj, "company_id"):
             obj_company_id = obj.company_id
-            print(f"Object has direct company_id: {obj_company_id}")
         elif hasattr(obj, "flow") and obj.flow:
             obj_company_id = obj.flow.company_id
-            print(f"Object has flow with company_id: {obj_company_id}")
-            print(f"Flow ID: {obj.flow.id}")
-            print(f"Flow name: {obj.flow.name}")
         else:
-            print(f"Object has no company_id or flow attribute: {obj}")
             return False
 
         user_company_id = request.user.recruiter.company_id
-        print(
-            f"Object company ID: {obj_company_id}, User company ID: {user_company_id}"
-        )
-        print(f"User recruiter ID: {request.user.recruiter.id}")
-
-        has_permission = obj_company_id == user_company_id
-        print(f"IsCompanyMember permission result: {has_permission}")
-        return has_permission
+        return obj_company_id == user_company_id
 
 
 class IsFlowOwner(permissions.BasePermission):
