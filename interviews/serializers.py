@@ -99,6 +99,19 @@ class FlowSerializer(serializers.ModelSerializer):
             "steps",
         ]
 
+    def create(self, validated_data):
+        steps_data = validated_data.pop("steps", [])
+        flow = Flow.objects.create(**validated_data)
+
+        for step_data in steps_data:
+            # Convert type back to step_type for the model
+            if "type" in step_data:
+                step_data["step_type"] = step_data.pop("type")
+            step_data["flow"] = flow
+            Step.objects.create(**step_data)
+
+        return flow
+
     def update(self, instance, validated_data):
         steps_data = validated_data.pop("steps", [])
         # Update flow fields
