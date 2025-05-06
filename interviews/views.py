@@ -15,7 +15,6 @@ from .serializers import (
     InterviewSerializer,
     RecruiterSerializer,
     StepSerializer,
-    UserSerializer,
 )
 
 
@@ -42,8 +41,9 @@ class RecruiterViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsRecruiter, IsCompanyMember]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        return queryset.filter(company_id=self.request.user.recruiter.company_id)
+        return Recruiter.objects.filter(
+            company_id=self.request.user.recruiter.company_id
+        )
 
 
 class FlowViewSet(viewsets.ModelViewSet):
@@ -195,5 +195,15 @@ class InterviewViewSet(viewsets.ModelViewSet):
 @permission_classes([IsAuthenticated])
 def get_current_user(request):
     """Get the current authenticated user's data."""
-    serializer = UserSerializer(request.user)
-    return Response(serializer.data)
+    print("get_current_user called")
+    print("User:", request.user)
+    print("Auth header:", request.headers.get("Authorization"))
+    try:
+        serializer = RecruiterSerializer(request.user.recruiter)
+        print("Serialized data:", serializer.data)
+        response = Response(serializer.data)
+        print("Response created:", response)
+        return response
+    except Exception as e:
+        print("Error in get_current_user:", str(e))
+        raise
