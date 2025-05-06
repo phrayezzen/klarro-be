@@ -62,31 +62,58 @@ class Flow(models.Model):
 
 
 class Step(models.Model):
-    STEP_TYPE_CHOICES = [
-        ("coding", "Coding Challenge"),
-        ("system_design", "System Design"),
+    STEP_TYPES = [
+        ("technical", "Technical"),
         ("behavioral", "Behavioral"),
-        ("technical", "Technical Discussion"),
-        ("case_study", "Case Study"),
-        ("pair_programming", "Pair Programming"),
+        ("project", "Project"),
+    ]
+
+    TONE_CHOICES = [
+        ("friendly", "Friendly & Supportive"),
+        ("professional", "Professional & Neutral"),
+        ("challenging", "Challenging & High-Bar"),
+        ("casual", "Casual & Conversational"),
     ]
 
     flow = models.ForeignKey(Flow, on_delete=models.CASCADE, related_name="steps")
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    step_type = models.CharField(max_length=20, choices=STEP_TYPE_CHOICES)
+    step_type = models.CharField(max_length=20, choices=STEP_TYPES)
     duration_minutes = models.IntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(480)]
     )
-    order = models.IntegerField()  # To maintain the sequence of steps
+    order = models.IntegerField()
+    interviewer_tone = models.CharField(
+        max_length=20, choices=TONE_CHOICES, default="professional"
+    )
+    assessed_skills = models.JSONField(default=list)  # List of skills to assess
+    custom_questions = models.JSONField(default=list)  # List of custom questions
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ["flow", "order"]  # Ensure unique order within a flow
+        unique_together = ["flow", "order"]
         ordering = ["flow", "order"]
 
     def __str__(self):
         return f"{self.flow.role_name} - {self.name} ({self.get_step_type_display()})"
+
+
+class ProjectStep(Step):
+    FILE_FORMAT_CHOICES = [
+        ("pdf", "PDF Document"),
+        ("zip", "ZIP Archive"),
+        ("github", "GitHub Repository"),
+        ("doc", "Word Document"),
+        ("other", "Other Format"),
+    ]
+
+    title = models.CharField(max_length=255)
+    instructions = models.TextField()
+    file_format = models.CharField(max_length=50, choices=FILE_FORMAT_CHOICES)
+
+    class Meta:
+        verbose_name = "Project Step"
+        verbose_name_plural = "Project Steps"
 
 
 class Candidate(models.Model):

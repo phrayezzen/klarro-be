@@ -6,27 +6,31 @@ from rest_framework import serializers
 from .models import Candidate, Company, Flow, Interview, Recruiter, Step
 
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ["id", "username", "email", "first_name", "last_name"]
-
-
 class CompanySerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
         fields = "__all__"
 
 
-class RecruiterSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-    user_id = serializers.IntegerField(write_only=True)
-    company = CompanySerializer(read_only=True)
-    company_id = serializers.IntegerField(write_only=True)
+class UserSerializer(serializers.ModelSerializer):
+    company_id = serializers.IntegerField(source="recruiter.company_id", read_only=True)
+    company_name = serializers.CharField(
+        source="recruiter.company.name", read_only=True
+    )
+    recruiter_id = serializers.IntegerField(source="recruiter.id", read_only=True)
 
     class Meta:
-        model = Recruiter
-        fields = ["id", "user", "user_id", "company", "company_id", "created_at"]
+        model = User
+        fields = [
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "recruiter_id",
+            "company_id",
+            "company_name",
+        ]
 
 
 class StepSerializer(serializers.ModelSerializer):
@@ -42,19 +46,47 @@ class StepSerializer(serializers.ModelSerializer):
             "duration_minutes",
             "order",
             "created_at",
+            "interviewer_tone",
+            "assessed_skills",
+            "custom_questions",
+        ]
+
+
+class RecruiterSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source="user.username", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+    first_name = serializers.CharField(source="user.first_name", read_only=True)
+    last_name = serializers.CharField(source="user.last_name", read_only=True)
+    company_id = serializers.IntegerField(source="company.id", read_only=True)
+    company_name = serializers.CharField(source="company.name", read_only=True)
+
+    class Meta:
+        model = Recruiter
+        fields = [
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "company_id",
+            "company_name",
+            "created_at",
         ]
 
 
 class FlowSerializer(serializers.ModelSerializer):
     recruiter = RecruiterSerializer(read_only=True)
     recruiter_id = serializers.IntegerField(write_only=True, required=False)
-    steps = StepSerializer(many=True, read_only=True)
+    company_id = serializers.IntegerField(source="company.id", read_only=True)
+    company_name = serializers.CharField(source="company.name", read_only=True)
+    steps = StepSerializer(many=True)
 
     class Meta:
         model = Flow
         fields = [
             "id",
-            "company",
+            "company_id",
+            "company_name",
             "recruiter",
             "recruiter_id",
             "role_name",
@@ -66,6 +98,35 @@ class FlowSerializer(serializers.ModelSerializer):
             "created_at",
             "steps",
         ]
+
+    def update(self, instance, validated_data):
+        steps_data = validated_data.pop("steps", [])
+        # Update flow fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Update steps
+        if steps_data:
+            # Delete existing steps that are not in the update
+            existing_step_ids = [step["id"] for step in steps_data if "id" in step]
+            instance.steps.exclude(id__in=existing_step_ids).delete()
+
+            # Update or create steps
+            for step_data in steps_data:
+                step_id = step_data.pop("id", None)
+                if step_id:
+                    # Update existing step
+                    step = instance.steps.get(id=step_id)
+                    for attr, value in step_data.items():
+                        setattr(step, attr, value)
+                    step.save()
+                else:
+                    # Create new step
+                    step_data["flow"] = instance
+                    Step.objects.create(**step_data)
+
+        return instance
 
 
 class CandidateSerializer(serializers.ModelSerializer):
