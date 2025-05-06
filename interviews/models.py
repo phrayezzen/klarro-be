@@ -4,6 +4,8 @@ from django.db import models
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+from .storage import CandidateResumeStorage
+
 
 class Company(models.Model):
     name = models.CharField(max_length=255)
@@ -121,7 +123,9 @@ class Candidate(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
-    resume_url = models.URLField(blank=True)
+    resume = models.FileField(
+        upload_to="", storage=CandidateResumeStorage(), null=True, blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     STATUS_CHOICES = [
         ("not_started", "Not Started"),

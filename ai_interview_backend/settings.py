@@ -69,7 +69,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # "django.middleware.clickjacking.XFrameOptionsMiddleware",  # Comment out this line
 ]
 
 ROOT_URLCONF = "ai_interview_backend.urls"
@@ -140,6 +140,13 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
+# Media files (Uploads)
+MEDIA_URL = "/resumes/"
+MEDIA_ROOT = BASE_DIR / "resumes"
+
+# Storage settings
+DEFAULT_FILE_STORAGE = "interviews.storage.CandidateResumeStorage"
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
@@ -180,3 +187,8 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
 ]
+
+# Security settings
+X_FRAME_OPTIONS = "SAMEORIGIN"
+SECURE_CONTENT_TYPE_NOSNIFF = False
+SECURE_BROWSER_XSS_FILTER = False

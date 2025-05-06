@@ -143,7 +143,9 @@ class FlowSerializer(serializers.ModelSerializer):
 
 
 class CandidateSerializer(serializers.ModelSerializer):
-    flow_name = serializers.CharField(source="flow.role_name", read_only=True)
+    flow_id = serializers.IntegerField(source="flow.id", read_only=True)
+    resume_url = serializers.SerializerMethodField()
+    role_name = serializers.CharField(source="flow.role_name", read_only=True)
     profile_picture_url = serializers.SerializerMethodField()
     interview_status = serializers.CharField(source="status", read_only=True)
     job_match_score = serializers.SerializerMethodField()
@@ -165,9 +167,13 @@ class CandidateSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "email",
+            "status",
             "flow",
-            "flow_name",
+            "flow_id",
+            "resume",
             "resume_url",
+            "created_at",
+            "role_name",
             "profile_picture_url",
             "interview_status",
             "job_match_score",
@@ -181,8 +187,32 @@ class CandidateSerializer(serializers.ModelSerializer):
             "behavioral_evaluation",
             "technical_evaluation",
             "preferences_evaluation",
-            "created_at",
         ]
+        read_only_fields = ["id", "created_at"]
+
+    def get_resume_url(self, obj):
+        if obj.resume:
+            print("=== Resume URL Debug ===")
+            print(f"Original resume path: {obj.resume.path}")
+            print(f"Original resume URL: {obj.resume.url}")
+            print(f"Request scheme: {self.context['request'].scheme}")
+            print(f"Request host: {self.context['request'].get_host()}")
+            print(f"Request headers: {dict(self.context['request'].headers)}")
+
+            # Get the base URL without the path
+            base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
+            print(f"Base URL: {base_url}")
+
+            # Get the file URL without the domain
+            file_url = obj.resume.url
+            print(f"File URL: {file_url}")
+
+            # Combine them
+            final_url = f"{base_url}{file_url}"
+            print(f"Final URL: {final_url}")
+            print("=====================")
+            return final_url
+        return None
 
     def get_profile_picture_url(self, obj):
         return f"https://ui-avatars.com/api/?name={obj.first_name}+{obj.last_name}"
