@@ -29,7 +29,13 @@ class PermissionTests(TestCase):
         )
 
         self.flow1 = Flow.objects.create(
-            company=self.company1, recruiter=self.recruiter1, name="Test Flow 1"
+            company=self.company1,
+            recruiter=self.recruiter1,
+            role_name="Test Flow",
+            role_description="Test Description",
+            role_function="engineering_data",
+            location="San Francisco, CA",
+            is_remote_allowed=True,
         )
 
         self.step1 = Step.objects.create(
@@ -163,13 +169,18 @@ class IsCompanyAdminTestCase(TestCase):
         self.non_admin = User.objects.create_user(
             username="nonadmin", email="nonadmin@example.com", password="testpass123"
         )
-        self.company.admins.add(self.admin)
+        # Create recruiter for admin
+        self.recruiter = Recruiter.objects.create(user=self.admin, company=self.company)
 
     def test_admin_access(self):
         """Test that company admin has access."""
         self.client.force_authenticate(user=self.admin)
         flow = Flow.objects.create(
-            name="Test Flow", description="Test Description", company=self.company
+            company=self.company,
+            recruiter=self.recruiter,
+            role_name="Test Role",
+            role_description="Test Description",
+            role_function="engineering_data",
         )
         url = f"/api/flows/{flow.id}/"
         response = self.client.get(url)
@@ -179,7 +190,11 @@ class IsCompanyAdminTestCase(TestCase):
         """Test that non-admin user does not have access."""
         self.client.force_authenticate(user=self.non_admin)
         flow = Flow.objects.create(
-            name="Test Flow", description="Test Description", company=self.company
+            company=self.company,
+            recruiter=self.recruiter,
+            role_name="Test Role",
+            role_description="Test Description",
+            role_function="engineering_data",
         )
         url = f"/api/flows/{flow.id}/"
         response = self.client.get(url)
@@ -193,7 +208,7 @@ class IsRecruiterTestCase(TestCase):
         """Set up test data."""
         self.client = APIClient()
         self.company = Company.objects.create(name="Test Company")
-        self.recruiter = User.objects.create_user(
+        self.recruiter_user = User.objects.create_user(
             username="recruiter", email="recruiter@example.com", password="testpass123"
         )
         self.non_recruiter = User.objects.create_user(
@@ -201,13 +216,19 @@ class IsRecruiterTestCase(TestCase):
             email="nonrecruiter@example.com",
             password="testpass123",
         )
-        self.company.recruiters.add(self.recruiter)
+        self.recruiter = Recruiter.objects.create(
+            user=self.recruiter_user, company=self.company
+        )
 
     def test_recruiter_access(self):
         """Test that recruiter has access."""
-        self.client.force_authenticate(user=self.recruiter)
+        self.client.force_authenticate(user=self.recruiter_user)
         flow = Flow.objects.create(
-            name="Test Flow", description="Test Description", company=self.company
+            company=self.company,
+            recruiter=self.recruiter,
+            role_name="Test Role",
+            role_description="Test Description",
+            role_function="engineering_data",
         )
         url = f"/api/flows/{flow.id}/"
         response = self.client.get(url)
@@ -217,7 +238,11 @@ class IsRecruiterTestCase(TestCase):
         """Test that non-recruiter user does not have access."""
         self.client.force_authenticate(user=self.non_recruiter)
         flow = Flow.objects.create(
-            name="Test Flow", description="Test Description", company=self.company
+            company=self.company,
+            recruiter=self.recruiter,
+            role_name="Test Role",
+            role_description="Test Description",
+            role_function="engineering_data",
         )
         url = f"/api/flows/{flow.id}/"
         response = self.client.get(url)
@@ -231,19 +256,25 @@ class IsCompanyMemberTestCase(TestCase):
         """Set up test data."""
         self.client = APIClient()
         self.company = Company.objects.create(name="Test Company")
-        self.member = User.objects.create_user(
+        self.member_user = User.objects.create_user(
             username="member", email="member@example.com", password="testpass123"
         )
         self.non_member = User.objects.create_user(
             username="nonmember", email="nonmember@example.com", password="testpass123"
         )
-        self.company.recruiters.add(self.member)
+        self.recruiter = Recruiter.objects.create(
+            user=self.member_user, company=self.company
+        )
 
     def test_member_access(self):
         """Test that company member has access."""
-        self.client.force_authenticate(user=self.member)
+        self.client.force_authenticate(user=self.member_user)
         flow = Flow.objects.create(
-            name="Test Flow", description="Test Description", company=self.company
+            company=self.company,
+            recruiter=self.recruiter,
+            role_name="Test Role",
+            role_description="Test Description",
+            role_function="engineering_data",
         )
         url = f"/api/flows/{flow.id}/"
         response = self.client.get(url)
@@ -253,7 +284,11 @@ class IsCompanyMemberTestCase(TestCase):
         """Test that non-member user does not have access."""
         self.client.force_authenticate(user=self.non_member)
         flow = Flow.objects.create(
-            name="Test Flow", description="Test Description", company=self.company
+            company=self.company,
+            recruiter=self.recruiter,
+            role_name="Test Role",
+            role_description="Test Description",
+            role_function="engineering_data",
         )
         url = f"/api/flows/{flow.id}/"
         response = self.client.get(url)

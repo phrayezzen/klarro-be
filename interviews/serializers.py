@@ -143,22 +143,14 @@ class FlowSerializer(serializers.ModelSerializer):
 
 
 class CandidateSerializer(serializers.ModelSerializer):
-    flow_id = serializers.IntegerField(source="flow.id", read_only=True)
+    flow_id = serializers.PrimaryKeyRelatedField(
+        source="flow", queryset=Flow.objects.all()
+    )
+    resume = serializers.FileField(required=False)
     resume_url = serializers.SerializerMethodField()
     role_name = serializers.CharField(source="flow.role_name", read_only=True)
     profile_picture_url = serializers.SerializerMethodField()
     interview_status = serializers.CharField(source="status", read_only=True)
-    job_match_score = serializers.SerializerMethodField()
-    experience_score = serializers.SerializerMethodField()
-    education_score = serializers.SerializerMethodField()
-    behavioral_score = serializers.SerializerMethodField()
-    technical_score = serializers.SerializerMethodField()
-    preferences_score = serializers.SerializerMethodField()
-    experience_evaluation = serializers.SerializerMethodField()
-    education_evaluation = serializers.SerializerMethodField()
-    behavioral_evaluation = serializers.SerializerMethodField()
-    technical_evaluation = serializers.SerializerMethodField()
-    preferences_evaluation = serializers.SerializerMethodField()
 
     class Meta:
         model = Candidate
@@ -168,7 +160,6 @@ class CandidateSerializer(serializers.ModelSerializer):
             "last_name",
             "email",
             "status",
-            "flow",
             "flow_id",
             "resume",
             "resume_url",
@@ -192,83 +183,17 @@ class CandidateSerializer(serializers.ModelSerializer):
 
     def get_resume_url(self, obj):
         if obj.resume:
-            print("=== Resume URL Debug ===")
-            print(f"Original resume path: {obj.resume.path}")
-            print(f"Original resume URL: {obj.resume.url}")
-            print(f"Request scheme: {self.context['request'].scheme}")
-            print(f"Request host: {self.context['request'].get_host()}")
-            print(f"Request headers: {dict(self.context['request'].headers)}")
-
-            # Get the base URL without the path
             base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
-            print(f"Base URL: {base_url}")
-
-            # Get the file URL without the domain
             file_url = obj.resume.url
-            print(f"File URL: {file_url}")
-
-            # Combine them
-            final_url = f"{base_url}{file_url}"
-            print(f"Final URL: {final_url}")
-            print("=====================")
-            return final_url
+            return f"{base_url}{file_url}"
         return None
 
     def get_profile_picture_url(self, obj):
+        if obj.profile_picture:
+            base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
+            file_url = obj.profile_picture.url
+            return f"{base_url}{file_url}"
         return f"https://ui-avatars.com/api/?name={obj.first_name}+{obj.last_name}"
-
-    def get_job_match_score(self, obj):
-        return 85.5
-
-    def get_experience_score(self, obj):
-        return 90.0
-
-    def get_education_score(self, obj):
-        return 85.0
-
-    def get_behavioral_score(self, obj):
-        return 88.0
-
-    def get_technical_score(self, obj):
-        return 92.0
-
-    def get_preferences_score(self, obj):
-        return 87.0
-
-    def get_experience_evaluation(self, obj):
-        return (
-            "Strong experience in full-stack development with 5+ years working on scalable "
-            "applications. Demonstrated expertise in React, Node.js, and cloud technologies. "
-            "Successfully led multiple projects from conception to deployment."
-        )
-
-    def get_education_evaluation(self, obj):
-        return (
-            "Bachelor's degree in Computer Science from a top-tier university. Relevant "
-            "coursework in algorithms, data structures, and software engineering. Additional "
-            "certifications in cloud technologies and agile methodologies."
-        )
-
-    def get_behavioral_evaluation(self, obj):
-        return (
-            "Excellent communication skills and team collaboration. Shows strong leadership "
-            "potential and problem-solving abilities. Adapts well to changing requirements "
-            "and demonstrates emotional intelligence in team interactions."
-        )
-
-    def get_technical_evaluation(self, obj):
-        return (
-            "Outstanding technical skills with deep knowledge of modern web technologies. "
-            "Strong problem-solving abilities and clean code practices. Demonstrates good "
-            "understanding of system design principles and best practices."
-        )
-
-    def get_preferences_evaluation(self, obj):
-        return (
-            "Prefers collaborative work environments and values continuous learning. "
-            "Interested in working on challenging projects with modern technologies. "
-            "Looking for opportunities to mentor junior developers and contribute to open source."
-        )
 
 
 class InterviewSerializer(serializers.ModelSerializer):
@@ -308,3 +233,31 @@ class InterviewSerializer(serializers.ModelSerializer):
                 }
             )
         return questions
+
+
+class EvaluationCriterionSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    description = serializers.CharField()
+    weight = serializers.FloatField(min_value=0, max_value=1)
+
+
+class FlowStepSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    description = serializers.CharField()
+    type = serializers.CharField()
+    duration_minutes = serializers.IntegerField(min_value=1)
+    order = serializers.IntegerField(min_value=0)
+
+
+class GPTFlowResponseSerializer(serializers.Serializer):
+    role_name = serializers.CharField()
+    role_function = serializers.CharField()
+    role_description = serializers.CharField()
+    location = serializers.CharField(allow_null=True)
+    is_remote_allowed = serializers.BooleanField()
+    steps = FlowStepSerializer(many=True)
+    evaluation_criteria = EvaluationCriterionSerializer(many=True)
+
+
+class GPTFlowDetailsResponseSerializer(serializers.Serializer):
+    questions = serializers.ListField(child=serializers.CharField())

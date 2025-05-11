@@ -21,9 +21,11 @@ class ResumeUploadTests(TestCase):
         self.flow = Flow.objects.create(
             company=self.company,
             recruiter=self.recruiter,
-            role_name="Test Role",
+            role_name="Test Flow",
             role_description="Test Description",
             role_function="engineering_data",
+            location="San Francisco, CA",
+            is_remote_allowed=True,
         )
 
         # Create test client
@@ -31,72 +33,49 @@ class ResumeUploadTests(TestCase):
         self.client.force_authenticate(user=self.user)
 
         # Create test PDF file
-        self.test_file = SimpleUploadedFile(
-            "test_resume.pdf", b"file_content", content_type="application/pdf"
+        self.resume_file = SimpleUploadedFile(
+            "test_resume.pdf", b"Test resume content", content_type="application/pdf"
+        )
+
+        # Create test candidate
+        self.candidate = Candidate.objects.create(
+            flow=self.flow, first_name="John", last_name="Doe", email="test@example.com"
         )
 
     def test_create_candidate_with_resume(self):
         """Test creating a candidate with a resume file."""
-        url = reverse("candidate-list")
+        url = "/api/v1/candidates/"
         data = {
+            "flow": self.flow.id,
             "first_name": "John",
             "last_name": "Doe",
-            "email": "john@example.com",
-            "flow": self.flow.id,
-            "resume": self.test_file,
+            "email": "test@example.com",
+            "resume": self.resume_file,
         }
-
         response = self.client.post(url, data, format="multipart")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        # Verify candidate was created
-        candidate = Candidate.objects.get(email="john@example.com")
-        self.assertIsNotNone(candidate.resume)
-        # Check if the path follows YYYY/MM/DD format
-        self.assertRegex(candidate.resume.name, r"^\d{4}/\d{2}/\d{2}/")
-
-        # Verify resume URL is in response
-        self.assertIn("resume_url", response.data)
-        self.assertIsNotNone(response.data["resume_url"])
+        self.assertIn("resume", response.data)
+        self.assertRegex(
+            response.data["resume"], r"^\d{4}/\d{2}/\d{2}/[a-zA-Z0-9_-]+\.pdf$"
+        )
 
     def test_update_candidate_resume(self):
         """Test updating a candidate's resume."""
-        # Create initial candidate
-        candidate = Candidate.objects.create(
-            flow=self.flow, first_name="John", last_name="Doe", email="john@example.com"
-        )
-
-        # Update resume
-        url = reverse("candidate-detail", args=[candidate.id])
-        data = {"resume": self.test_file}
-
+        url = f"/api/v1/candidates/{self.candidate.id}/"
+        data = {"resume": self.resume_file}
         response = self.client.patch(url, data, format="multipart")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        # Verify resume was updated
-        candidate.refresh_from_db()
-        self.assertIsNotNone(candidate.resume)
-        # Check if the path follows YYYY/MM/DD format
-        self.assertRegex(candidate.resume.name, r"^\d{4}/\d{2}/\d{2}/")
+        self.assertIn("resume", response.data)
+        self.assertRegex(
+            response.data["resume"], r"^\d{4}/\d{2}/\d{2}/[a-zA-Z0-9_-]+\.pdf$"
+        )
 
     def test_delete_candidate_resume(self):
         """Test deleting a candidate's resume."""
-        # Create candidate with resume
-        candidate = Candidate.objects.create(
-            flow=self.flow,
-            first_name="John",
-            last_name="Doe",
-            email="john@example.com",
-            resume=self.test_file,
-        )
-
-        # Delete resume
-        url = reverse("candidate-detail", args=[candidate.id])
-        data = {"resume": ""}
-
-        response = self.client.patch(url, data, format="multipart")
+        url = f"/api/v1/candidates/{self.candidate.id}/"
+        data = {"resume": None}
+        response = self.client.patch(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        # Verify resume was deleted
-        candidate.refresh_from_db()
-        self.assertFalse(bool(candidate.resume))
+        self.assertIsNone(response.data["resume"])
+        self.candidate.refresh_from_db()
+        self.assertIsNone(self.candidate.resume)

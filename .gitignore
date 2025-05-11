@@ -84,3 +84,5 @@ yarn-error.log*
 
 # System Files
 Thumbs.db
+.env
+.venv

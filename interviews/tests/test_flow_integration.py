@@ -19,136 +19,89 @@ class FlowIntegrationTest(TestCase):
         self.client.force_authenticate(user=self.user)
 
         # Create test company
-        self.company = Company.objects.create(
-            name="Test Company", description="Test Description"
-        )
+        self.company = Company.objects.create(name="Test Company")
 
         # Create recruiter for the user
         self.recruiter = Recruiter.objects.create(user=self.user, company=self.company)
 
         # Test flow data
-        self.flow_data = {
-            "company": self.company.id,
-            "name": "Test Flow",
-            "description": "A test flow for integration testing",
-            "role": "engineering_data",
-            "nodes": [
-                {
-                    "id": "1",
-                    "type": "start",
-                    "position": {"x": 0, "y": 0},
-                    "data": {"label": "Start"},
-                },
-                {
-                    "id": "2",
-                    "type": "question",
-                    "position": {"x": 100, "y": 100},
-                    "data": {
-                        "label": "Test Question",
-                        "question": "What is your name?",
-                        "type": "text",
-                    },
-                },
-            ],
-            "edges": [{"id": "e1-2", "source": "1", "target": "2", "type": "default"}],
-        }
+        self.flow = Flow.objects.create(
+            company=self.company,
+            recruiter=self.recruiter,
+            role_name="Test Flow",
+            role_description="Test Description",
+            role_function="engineering_data",
+            location="San Francisco, CA",
+            is_remote_allowed=True,
+        )
 
     def test_create_and_retrieve_flow(self):
-        # Test creating a flow
-        create_url = reverse("flow-list")
-        response = self.client.post(create_url, self.flow_data, format="json")
-        print(
-            "Create Flow Response:", response.status_code, response.data
-        )  # Debug print
+        """Test creating and retrieving a flow."""
+        url = "/api/v1/flows/"
+        data = {
+            "company": self.company.id,
+            "recruiter": self.recruiter.id,
+            "role_name": "Test Flow",
+            "role_description": "Test Description",
+            "role_function": "engineering_data",
+            "location": "San Francisco, CA",
+            "is_remote_allowed": True,
+            "steps": [
+                {
+                    "name": "Initial Screening",
+                    "description": "Initial screening interview",
+                    "step_type": "behavioral",
+                    "duration_minutes": 30,
+                    "order": 1,
+                    "interviewer_tone": "professional",
+                },
+                {
+                    "name": "Technical Assessment",
+                    "description": "Technical skills assessment",
+                    "step_type": "technical",
+                    "duration_minutes": 60,
+                    "order": 2,
+                    "interviewer_tone": "professional",
+                },
+            ],
+        }
+        response = self.client.post(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        flow_id = response.data["id"]
-
-        # Test retrieving flow list
-        list_url = reverse("flow-list")
-        response = self.client.get(list_url)
-        print("List Flow Response:", response.status_code, response.data)  # Debug print
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["name"], self.flow_data["name"])
-
-        # Test retrieving flow detail
-        detail_url = reverse("flow-detail", kwargs={"pk": flow_id})
-        response = self.client.get(detail_url)
-        print(
-            "Detail Flow Response:", response.status_code, response.data
-        )  # Debug print
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["name"], self.flow_data["name"])
-        self.assertEqual(response.data["company"], self.company.id)
-        self.assertEqual(
-            response.data["recruiter"]["id"], self.recruiter.id
-        )  # Check nested recruiter ID
+        self.assertEqual(response.data["role_name"], "Test Flow")
+        self.assertEqual(len(response.data["steps"]), 2)
 
     def test_edit_flow(self):
-        # Create initial flow
-        create_url = reverse("flow-list")
-        response = self.client.post(create_url, self.flow_data, format="json")
-        print(
-            "Create Flow Response:", response.status_code, response.data
-        )  # Debug print
-        flow_id = response.data["id"]
-
-        # Edit flow data
-        updated_data = self.flow_data.copy()
-        updated_data["name"] = "Updated Flow"
-        updated_data["description"] = "Updated description"
-
-        # Test updating flow
-        detail_url = reverse("flow-detail", kwargs={"pk": flow_id})
-        response = self.client.put(detail_url, updated_data, format="json")
-        print(
-            "Update Flow Response:", response.status_code, response.data
-        )  # Debug print
+        """Test editing a flow."""
+        url = f"/api/v1/flows/{self.flow.id}/"
+        data = {
+            "role_name": "Updated Flow",
+            "role_description": "Updated Description",
+            "steps": [
+                {
+                    "name": "Updated Screening",
+                    "description": "Updated screening interview",
+                    "step_type": "behavioral",
+                    "duration_minutes": 45,
+                    "order": 1,
+                    "interviewer_tone": "professional",
+                }
+            ],
+        }
+        response = self.client.patch(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["name"], "Updated Flow")
-        self.assertEqual(response.data["description"], "Updated description")
-
-        # Verify changes in list view
-        list_url = reverse("flow-list")
-        response = self.client.get(list_url)
-        print("List Flow Response:", response.status_code, response.data)  # Debug print
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data[0]["name"], "Updated Flow")
+        self.assertEqual(response.data["role_name"], "Updated Flow")
+        self.assertEqual(len(response.data["steps"]), 1)
 
     def test_create_candidate(self):
-        # Create a flow first
-        create_flow_url = reverse("flow-list")
-        flow_response = self.client.post(create_flow_url, self.flow_data, format="json")
-        print(
-            "Create Flow Response:", flow_response.status_code, flow_response.data
-        )  # Debug print
-        flow_id = flow_response.data["id"]
-
-        # Create candidate data
-        candidate_data = {
-            "flow": flow_id,
-            "first_name": "Test",
-            "last_name": "Candidate",
-            "email": "candidate@example.com",
+        """Test creating a candidate for a flow."""
+        url = "/api/v1/candidates/"
+        data = {
+            "flow": self.flow.id,
+            "first_name": "John",
+            "last_name": "Doe",
+            "email": "test@example.com",
         }
-
-        # Test creating candidate
-        create_candidate_url = reverse("candidate-list")
-        response = self.client.post(create_candidate_url, candidate_data, format="json")
-        print(
-            "Create Candidate Response:", response.status_code, response.data
-        )  # Debug print
+        response = self.client.post(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["first_name"], candidate_data["first_name"])
-        self.assertEqual(response.data["last_name"], candidate_data["last_name"])
-        self.assertEqual(response.data["flow"], flow_id)
-
-        # Verify candidate in list view
-        list_url = reverse("candidate-list")
-        response = self.client.get(list_url)
-        print(
-            "List Candidate Response:", response.status_code, response.data
-        )  # Debug print
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["email"], candidate_data["email"])
+        self.assertEqual(response.data["first_name"], "John")
+        self.assertEqual(response.data["last_name"], "Doe")

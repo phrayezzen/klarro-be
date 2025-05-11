@@ -1,21 +1,34 @@
+from asgiref.sync import async_to_sync, sync_to_async
 from django.db import models
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import filters, permissions, viewsets
+from django.views.decorators.http import require_http_methods
+from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Candidate, Flow, Interview, Recruiter, Step
+from .models import Candidate, Company, Flow, Interview, Recruiter, Step
 from .permissions import IsCompanyMember, IsRecruiter
 from .serializers import (
     CandidateSerializer,
+    CompanySerializer,
     FlowSerializer,
     InterviewSerializer,
     RecruiterSerializer,
     StepSerializer,
 )
+from .services.ai_service import handle_message
+
+
+class CompanyViewSet(viewsets.ModelViewSet):
+    queryset = Company.objects.all()
+    serializer_class = CompanySerializer
+    permission_classes = [IsAuthenticated, IsRecruiter, IsCompanyMember]
+
+    def get_queryset(self):
+        return Company.objects.filter(id=self.request.user.recruiter.company_id)
 
 
 class StepViewSet(viewsets.ModelViewSet):
@@ -207,3 +220,123 @@ def get_current_user(request):
     except Exception as e:
         print("Error in get_current_user:", str(e))
         raise
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def send_message(request):
+    """Send a message to the AI assistant."""
+    try:
+        message = request.data.get("message", "").strip()
+        if not message:
+            return Response(
+                {"error": "Message is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Get current user and company
+        recruiter = request.user.recruiter
+        company = recruiter.company
+
+        # Store user message in session
+        messages = request.session.get("messages", [])
+        user_message = {
+            "id": timezone.now().timestamp(),
+            "text": message,
+            "sender": "user",
+            "timestamp": timezone.now().isoformat(),
+        }
+        messages.append(user_message)
+        request.session["messages"] = messages
+
+        # Let GPT handle the message using async_to_sync
+        response_text, flow, flow_details = async_to_sync(handle_message)(
+            message=message,
+            company=company,
+            recruiter=recruiter,
+        )
+
+        # Store assistant response in session
+        assistant_message = {
+            "id": timezone.now().timestamp() + 1,
+            "text": response_text,
+            "sender": "assistant",
+            "timestamp": timezone.now().isoformat(),
+        }
+        messages.append(assistant_message)
+        request.session["messages"] = messages
+
+        # Prepare response
+        response_data = {
+            "message": assistant_message,
+        }
+
+        # Add flow details if available
+        if flow:
+            # Add success message about flow creation
+            success_message = {
+                "id": timezone.now().timestamp() + 2,
+                "text": f"I've created an interview flow for {flow.role_name}. You can review and edit it if needed.",
+                "sender": "assistant",
+                "timestamp": timezone.now().isoformat(),
+            }
+            messages.append(success_message)
+            request.session["messages"] = messages
+
+            response_data.update(
+                {
+                    "flow": FlowSerializer(flow).data,
+                    "success_message": success_message,
+                    "redirect_to": f"/flows/{flow.id}/edit",  # Frontend will handle this
+                }
+            )
+        elif flow_details:
+            # Add message about needing more details
+            details_message = {
+                "id": timezone.now().timestamp() + 2,
+                "text": "I need some more information to create the flow. Please answer these questions:",
+                "sender": "assistant",
+                "timestamp": timezone.now().isoformat(),
+            }
+            messages.append(details_message)
+            request.session["messages"] = messages
+
+            response_data.update(
+                {
+                    "flow_details": {
+                        "context": flow_details.context,
+                        "questions": flow_details.questions,
+                    },
+                    "details_message": details_message,
+                }
+            )
+
+        return Response(response_data)
+
+    except Exception as e:
+        error_message = f"Error processing your request: {str(e)}"
+        print(f"Error in send_message: {str(e)}")
+
+        # Add error message to chat
+        messages = request.session.get("messages", [])
+        error_chat_message = {
+            "id": timezone.now().timestamp() + 1,
+            "text": error_message,
+            "sender": "assistant",
+            "timestamp": timezone.now().isoformat(),
+        }
+        messages.append(error_chat_message)
+        request.session["messages"] = messages
+
+        return Response(
+            {"error": error_message, "message": error_chat_message},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_chat_updates(request):
+    """Get any new chat messages."""
+    # Return all messages from session
+    messages = request.session.get("messages", [])
+    return Response(messages)

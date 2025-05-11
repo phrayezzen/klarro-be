@@ -1,10 +1,14 @@
+import os
+
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.files.storage import FileSystemStorage
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from .storage import CandidateResumeStorage
+from .storage import CandidateProfilePictureStorage, CandidateResumeStorage
 
 
 class Company(models.Model):
@@ -15,6 +19,9 @@ class Company(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        verbose_name_plural = "companies"
+
 
 class Recruiter(models.Model):
     user = models.OneToOneField(
@@ -23,6 +30,7 @@ class Recruiter(models.Model):
     company = models.ForeignKey(
         Company, on_delete=models.CASCADE, related_name="recruiters"
     )
+    is_admin = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -126,6 +134,9 @@ class Candidate(models.Model):
     resume = models.FileField(
         upload_to="", storage=CandidateResumeStorage(), null=True, blank=True
     )
+    profile_picture = models.ImageField(
+        upload_to="", storage=CandidateProfilePictureStorage(), null=True, blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     STATUS_CHOICES = [
         ("not_started", "Not Started"),
@@ -135,6 +146,21 @@ class Candidate(models.Model):
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default="not_started"
     )
+
+    # Score fields
+    job_match_score = models.FloatField(null=True, blank=True)
+    experience_score = models.FloatField(null=True, blank=True)
+    education_score = models.FloatField(null=True, blank=True)
+    behavioral_score = models.FloatField(null=True, blank=True)
+    technical_score = models.FloatField(null=True, blank=True)
+    preferences_score = models.FloatField(null=True, blank=True)
+
+    # Evaluation fields
+    experience_evaluation = models.TextField(null=True, blank=True)
+    education_evaluation = models.TextField(null=True, blank=True)
+    behavioral_evaluation = models.TextField(null=True, blank=True)
+    technical_evaluation = models.TextField(null=True, blank=True)
+    preferences_evaluation = models.TextField(null=True, blank=True)
 
     class Meta:
         unique_together = ["email", "flow"]
