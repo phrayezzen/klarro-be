@@ -36,6 +36,7 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "f157-67-245-144-91.ngrok-free.app",  # Your ngrok domain
     "a3ac-67-245-144-91.ngrok-free.app",  # New ngrok domain
+    "klarro-be-7941d356d874.herokuapp.com",  # Heroku domain
 ]
 
 
@@ -170,6 +171,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5174",
     "https://f157-67-245-144-91.ngrok-free.app",  # Ngrok URL
     "https://a3ac-67-245-144-91.ngrok-free.app",  # New ngrok URL
+    "https://klarro-be-7941d356d874.herokuapp.com",  # Heroku domain
 ]
 
 # CSRF settings
@@ -180,6 +182,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5174",
     "https://f157-67-245-144-91.ngrok-free.app",
     "https://a3ac-67-245-144-91.ngrok-free.app",
+    "https://klarro-be-7941d356d874.herokuapp.com",  # Heroku domain
 ]
 
 CORS_ALLOW_CREDENTIALS = True
