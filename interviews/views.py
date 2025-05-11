@@ -20,6 +20,8 @@ from .serializers import (
     StepSerializer,
 )
 from .services.ai_service import handle_message
+from .services.interview_service import generate_interview_response
+from .services.tts_service import text_to_speech as convert_to_speech
 
 
 class CompanyViewSet(viewsets.ModelViewSet):
@@ -351,3 +353,69 @@ def get_chat_updates(request):
     # Return all messages from session
     messages = request.session.get("messages", [])
     return Response(messages)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def interview_respond(request):
+    try:
+        # Extract data from request
+        message = request.data.get("message")
+        flow_id = request.data.get("flowId")
+        conversation_history = request.data.get("conversationHistory", [])
+
+        # Validate required fields
+        if not message or not flow_id:
+            return Response(
+                {"error": "Message and flow ID are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Get flow
+        try:
+            flow = Flow.objects.get(id=flow_id)
+        except Flow.DoesNotExist:
+            return Response(
+                {"error": "Flow not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Generate interview response
+        response = generate_interview_response(
+            user_message=message, flow=flow, conversation_history=conversation_history
+        )
+
+        # Prepare response data
+        response_data = {"response": response["text"], "audio": response["audio"]}
+
+        return Response(response_data)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def text_to_speech(request):
+    """
+    Convert text to speech without AI processing.
+    """
+    try:
+        # Get text from request data
+        text = request.data.get("text")
+        if not text:
+            return Response(
+                {"error": "Text is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Convert text to speech
+        audio_format, audio_base64 = convert_to_speech(text)
+
+        return Response({"audio": {"format": audio_format, "data": audio_base64}})
+    except ValueError as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        print(f"Error in text_to_speech view: {str(e)}")
+        return Response(
+            {"error": "Failed to convert text to speech"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )

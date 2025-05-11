@@ -35,6 +35,7 @@ ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     "f157-67-245-144-91.ngrok-free.app",  # Your ngrok domain
+    "a3ac-67-245-144-91.ngrok-free.app",  # New ngrok domain
 ]
 
 
@@ -168,6 +169,17 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5174",  # Vite dev server (alternative port)
     "http://127.0.0.1:5174",
     "https://f157-67-245-144-91.ngrok-free.app",  # Ngrok URL
+    "https://a3ac-67-245-144-91.ngrok-free.app",  # New ngrok URL
+]
+
+# CSRF settings
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "https://f157-67-245-144-91.ngrok-free.app",
+    "https://a3ac-67-245-144-91.ngrok-free.app",
 ]
 
 CORS_ALLOW_CREDENTIALS = True

@@ -67,12 +67,19 @@ class RecruiterAdmin(admin.ModelAdmin):
     get_full_name.short_description = "Name"
 
 
-# @admin.register(Flow)
-# class FlowAdmin(admin.ModelAdmin):
-#     list_display = ("name", "company", "recruiter", "role", "job_title", "job_location", "is_remote_allowed", "created_at")
-#     list_filter = ("company", "recruiter", "role", "is_remote_allowed", "created_at")
-#     search_fields = ("name", "description", "job_title", "job_location")
-#     raw_id_fields = ("recruiter",)
+@admin.register(Flow)
+class FlowAdmin(admin.ModelAdmin):
+    list_display = (
+        "role_name",
+        "role_function",
+        "company",
+        "recruiter",
+        "is_active",
+        "created_at",
+    )
+    list_filter = ("company", "recruiter", "role_function", "is_active", "created_at")
+    search_fields = ("role_name", "role_function")
+    raw_id_fields = ("recruiter",)
 
 
 @admin.register(Step)
