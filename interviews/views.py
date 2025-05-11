@@ -85,6 +85,14 @@ class FlowViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You can only update flows within your company")
         serializer.save()
 
+    @action(detail=True, methods=["post"])
+    def toggle_active(self, request, pk=None):
+        flow = self.get_object()
+        flow.is_active = not flow.is_active
+        flow.save()
+        serializer = self.get_serializer(flow)
+        return Response(serializer.data)
+
     @action(detail=True, methods=["get", "post"])
     def steps(self, request, pk=None):
         flow = self.get_object()
@@ -249,7 +257,7 @@ def send_message(request):
         request.session["messages"] = messages
 
         # Let GPT handle the message using async_to_sync
-        response_text, flow, flow_details = async_to_sync(handle_message)(
+        response_text, flow, flow_details, redirect_to = async_to_sync(handle_message)(
             message=message,
             company=company,
             recruiter=recruiter,
@@ -309,6 +317,9 @@ def send_message(request):
                     "details_message": details_message,
                 }
             )
+        elif redirect_to:
+            # Add redirect_to to response if provided
+            response_data["redirect_to"] = redirect_to
 
         return Response(response_data)
 
