@@ -65,10 +65,32 @@ def generate_interview_response(
         # Add user message
         messages.append({"role": "user", "content": user_message})
 
+        print("\nSending request to OpenAI:")
+        print(f"Model: gpt-4")
+        print(f"Temperature: 0.7")
+        print(f"Max tokens: 500")
+        print("\nMessages:")
+        for msg in messages:
+            print(f"\nRole: {msg['role']}")
+            print(
+                f"Content: {msg['content'][:200]}..."
+            )  # Print first 200 chars of each message
+
         # Call OpenAI API
-        response = client.chat.completions.create(
-            model="gpt-4", messages=messages, temperature=0.7, max_tokens=500
-        )
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4", messages=messages, temperature=0.7, max_tokens=500
+            )
+            print("\nReceived response from OpenAI:")
+            print(
+                f"Response content: {response.choices[0].message.content[:200]}..."
+            )  # Print first 200 chars of response
+        except Exception as api_error:
+            print("\nOpenAI API Error:")
+            print(f"Error type: {type(api_error).__name__}")
+            print(f"Error message: {str(api_error)}")
+            print(f"Error details: {api_error.__dict__}")
+            raise
 
         # Get response text
         response_text = response.choices[0].message.content

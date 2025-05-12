@@ -179,8 +179,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5174",
     "https://f157-67-245-144-91.ngrok-free.app",  # Ngrok URL
     "https://a3ac-67-245-144-91.ngrok-free.app",  # New ngrok URL
-    "https://klarro-be-7941d356d874.herokuapp.com",  # Heroku domain
-    "https://api.klarro.ai",  # Custom domain
+    "https://app.klarro.ai",  # Production domain
+    "http://app.klarro.ai",  # Production domain (non-HTTPS)
 ]
 
 # CSRF settings
@@ -191,8 +191,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5174",
     "https://f157-67-245-144-91.ngrok-free.app",
     "https://a3ac-67-245-144-91.ngrok-free.app",
-    "https://klarro-be-7941d356d874.herokuapp.com",  # Heroku domain
-    "https://api.klarro.ai",  # Custom domain
+    "https://app.klarro.ai",  # Production domain
+    "http://app.klarro.ai",  # Production domain (non-HTTPS)
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -219,6 +219,11 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 
+# Additional CORS settings
+CORS_ORIGIN_ALLOW_ALL = False
+CORS_REPLACE_HTTPS_REFERER = True
+CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
+
 # Security settings
 X_FRAME_OPTIONS = "SAMEORIGIN"
 SECURE_CONTENT_TYPE_NOSNIFF = False
@@ -226,6 +231,7 @@ SECURE_BROWSER_XSS_FILTER = False
 
 # OpenAI Settings
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 if not OPENAI_API_KEY:
     raise ValueError(
         "OPENAI_API_KEY environment variable is not set. Please check your .env file."

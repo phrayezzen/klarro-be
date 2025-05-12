@@ -6,6 +6,7 @@ from django.views.decorators.http import require_http_methods
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -68,6 +69,12 @@ class FlowViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ["role_name", "role_function", "location", "created_at"]
     ordering = ["-created_at"]
+    pagination_class = LimitOffsetPagination
+
+    def get_paginator(self):
+        paginator = super().get_paginator()
+        paginator.default_limit = 10
+        return paginator
 
     def get_queryset(self):
         queryset = super().get_queryset()

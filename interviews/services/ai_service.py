@@ -274,8 +274,23 @@ async def generate_flow(
 ) -> Tuple[Optional[Flow], Optional[FlowDetails]]:
     """Generate an interview flow for a role."""
     try:
-        # Initialize OpenAI client
-        client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        # Clean the API key
+        cleaned_key = (
+            settings.OPENAI_API_KEY.strip() if settings.OPENAI_API_KEY else None
+        )
+
+        # Initialize OpenAI client with cleaned key
+        client = openai.AsyncOpenAI(api_key=cleaned_key)
+
+        # Test the API key with a simple request
+        try:
+            test_response = await client.chat.completions.create(
+                model="gpt-3.5-turbo-0125",
+                messages=[{"role": "user", "content": "test"}],
+                max_tokens=5,
+            )
+        except Exception as test_error:
+            raise
 
         # Prepare the prompt
         prompt = create_flow_prompt(role_name, additional_context)
@@ -481,47 +496,26 @@ async def handle_message(
         You can help with the following tasks:
         1. Get candidate recommendations (e.g., "recommend candidates", "who are the top candidates", "show me the best candidates", "what are the best candidates for flow X")
         2. Create interview flows (e.g., "create a flow", "create an interview flow", "make a flow")
-        3. Generate candidate summaries (e.g., "summarize candidate", "give me a summary of candidate", "tell me about candidate")
+        3. Generate candidate summaries (e.g., "summarize candidate", "give me a summary of candidate", "tell me about candidate")"""
 
-        For candidate recommendations:
-        - Use the {ToolName.RECOMMEND_CANDIDATES.value} tool when they want to see top candidates
-        - If they mention a flow or role, use that role name to get recommendations
-        - If they don't specify a role, ask them which role they want recommendations for
-        - If they don't specify how many candidates, default to 3
-
-        For flow creation:
-        - Use the {ToolName.CREATE_FLOW.value} tool if they explicitly want to create a new flow
-        - Use the {ToolName.REQUEST_MORE_DETAILS.value} tool if they don't specify a role
-        - The role_name must be a specific job title (e.g., "Software Engineer", "Product Manager", "Data Scientist")
-        - DO NOT use the company name as the role_name
-
-        For candidate summaries:
-        - Use the {ToolName.SUMMARIZE_CANDIDATE.value} tool when they want a summary of a specific candidate
-        - Extract the candidate ID from their message
-        - If they don't specify a candidate ID, ask them which candidate they want to summarize
-
-        IMPORTANT: 
-        - If the user is asking about candidates or recommendations, use the {ToolName.RECOMMEND_CANDIDATES.value} tool
-        - If the user is asking for a candidate summary, use the {ToolName.SUMMARIZE_CANDIDATE.value} tool
-        - Only use {ToolName.CREATE_FLOW.value} when they explicitly want to create a new flow
-        - Never create a flow when they're asking about existing candidates
-        - Never provide a generic response for flow creation or recommendation requests"""
+        # Define system message
+        system_message = {
+            "role": "system",
+            "content": """You are Taylor, a member of the recruiting team. You have a friendly and professional demeanor, with a focus on building relationships and finding the best talent. You're knowledgeable about recruitment processes and always maintain a positive, encouraging tone while being thorough in your assessments. You can help create interview flows, provide candidate recommendations, and generate candidate summaries. You must use the appropriate tools for each request.""",
+        }
 
         # Get completion from OpenAI
-        response = await client.chat.completions.create(
-            model="gpt-3.5-turbo-0125",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are an AI assistant for a recruitment platform. You can help create interview flows, provide candidate recommendations, and generate candidate summaries. You must use the appropriate tools for each request.",
-                },
-                {"role": "user", "content": prompt},
-            ],
-            tools=TOOLS,
-            tool_choice="auto",
-            temperature=0.7,
-            max_tokens=1000,
-        )
+        try:
+            response = await client.chat.completions.create(
+                model="gpt-3.5-turbo-0125",
+                messages=[system_message, {"role": "user", "content": prompt}],
+                tools=TOOLS,
+                tool_choice="auto",
+                temperature=0.7,
+                max_tokens=1000,
+            )
+        except Exception as api_error:
+            raise
 
         # Parse the response
         message = response.choices[0].message
@@ -549,23 +543,18 @@ async def handle_message(
                 elif function_name == ToolName.RECOMMEND_CANDIDATES.value:
                     role_name = function_args["role_name"]
                     top_n = function_args.get("top_n", 3)
-                    print(f"Looking for flow with role_name: {role_name}")
-                    print(f"Company ID: {company.id}")
 
                     # Get the flow by role name
                     try:
                         flow = await sync_to_async(Flow.objects.get)(
                             role_name=role_name, company=company
                         )
-                        print(f"Found flow: {flow.id} - {flow.role_name}")
 
                         # Get recommendations
                         recommendations = await recommend_candidates(flow, top_n)
-                        print(f"Got {len(recommendations)} recommendations")
 
                         # Format recommendations as a response
                         if not recommendations:
-                            print("No recommendations found")
                             return (
                                 f"No candidates found for the {role_name} role.",
                                 None,

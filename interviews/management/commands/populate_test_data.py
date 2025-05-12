@@ -1,9 +1,10 @@
 import random
 import uuid
-from datetime import timedelta, timezone
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 from interviews.models import (
     Candidate,
@@ -38,10 +39,12 @@ class Command(BaseCommand):
             num_recruiters = random.randint(2, 5)
             for i in range(num_recruiters):
                 username = f"recruiter_{company.name.lower()}_{i + 1}"
+                username = f"recruiter_{company.name.lower()}_{i + 1}"
                 user = User.objects.create_user(
                     username=username,
                     email=f"{username}@example.com",
                     password="testpass123",
+                    first_name=f"Recruiter {i + 1}",
                     first_name=f"Recruiter {i + 1}",
                     last_name=company.name,
                 )
