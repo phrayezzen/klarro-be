@@ -112,12 +112,11 @@ if not DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable is not set")
 
 DATABASES = {
-    "default": {
-        **dj_database_url.parse(DATABASE_URL),
-        "ENGINE": "django.db.backends.postgresql",
-        "CONN_MAX_AGE": 600,
-        "CONN_HEALTH_CHECKS": True,
-    }
+    "default": dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 
