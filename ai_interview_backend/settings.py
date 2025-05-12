@@ -74,14 +74,14 @@ REST_FRAMEWORK = {
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # Must be after security and before all others
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    # "django.middleware.clickjacking.XFrameOptionsMiddleware",  # Comment out this line
+    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',  # Comment out this line
 ]
 
 ROOT_URLCONF = "ai_interview_backend.urls"
@@ -161,10 +161,13 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.1/howto/static-files/
-
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Additional static files locations
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 
 # Media files (Uploads)
 MEDIA_URL = "/resumes/"
@@ -262,6 +265,11 @@ if not OPENAI_API_KEY:
 
 # Whitenoise configuration
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# Ensure Whitenoise is properly configured
+WHITENOISE_USE_FINDERS = True
+WHITENOISE_MANIFEST_STRICT = False
+WHITENOISE_ALLOW_ALL_ORIGINS = True
 
 # Logging configuration
 LOGGING = {
