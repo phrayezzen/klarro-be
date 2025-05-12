@@ -7,10 +7,21 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name="flow",
-            name="role_name",
-            field=models.CharField(max_length=255, default=""),
-            preserve_default=False,
+        migrations.RunSQL(
+            # Check if column exists before adding it
+            sql="""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 
+                    FROM information_schema.columns 
+                    WHERE table_name='interviews_flow' 
+                    AND column_name='role_name'
+                ) THEN
+                    ALTER TABLE interviews_flow ADD COLUMN role_name varchar(255) NOT NULL DEFAULT '';
+                END IF;
+            END $$;
+            """,
+            reverse_sql="ALTER TABLE interviews_flow DROP COLUMN IF EXISTS role_name;",
         ),
     ]
