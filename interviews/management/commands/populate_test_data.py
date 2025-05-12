@@ -228,6 +228,8 @@ class Command(BaseCommand):
                     cheating_flag=False,
                     completed_at=timezone.now() if status == "completed" else None,
                 )
-                self.stdout.write(f"Created interview: {interview}")
+                self.stdout.write(
+                    f"Created interview: {interview.step.name} Interview of {interview.candidate} for {interview.step.flow.role_name}"
+                )
 
         self.stdout.write(self.style.SUCCESS("Successfully populated test data!"))
