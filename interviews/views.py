@@ -7,7 +7,7 @@ from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Candidate, Company, Flow, Interview, Recruiter, Step
@@ -426,3 +426,10 @@ def text_to_speech(request):
             {"error": "Failed to convert text to speech"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_csrf_token(request):
+    """Get a CSRF token cookie."""
+    return Response({"detail": "CSRF cookie set"})
