@@ -198,15 +198,18 @@ CORS_ALLOWED_ORIGINS = [
 
 # CSRF settings
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-    "https://f157-67-245-144-91.ngrok-free.app",
-    "https://a3ac-67-245-144-91.ngrok-free.app",
     "https://app.klarro.ai",  # Production domain
     "http://app.klarro.ai",  # Production domain (non-HTTPS)
 ]
+
+# CSRF Cookie settings
+CSRF_COOKIE_DOMAIN = ".klarro.ai"  # Allow subdomains
+CSRF_COOKIE_PATH = "/"
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_HTTPONLY = False  # Must be False for CSRF token
+CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_USE_SESSIONS = False
+CSRF_COOKIE_NAME = "csrftoken"
 
 CORS_ALLOW_CREDENTIALS = True
 

@@ -1,4 +1,5 @@
 from asgiref.sync import async_to_sync, sync_to_async
+from django.conf import settings
 from django.db import models
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
@@ -433,5 +434,21 @@ def text_to_speech(request):
 @permission_classes([AllowAny])
 def get_csrf_token(request):
     """Get a CSRF token cookie."""
-    get_token(request)  # This will set the CSRF cookie
-    return Response({"detail": "CSRF cookie set"})
+    # Get the token
+    token = get_token(request)
+
+    # Create response
+    response = Response({"detail": "CSRF cookie set"})
+
+    # Set cookie with domain for subdomains
+    response.set_cookie(
+        "csrftoken",
+        token,
+        domain=".klarro.ai",  # Allow subdomains
+        path="/",
+        secure=True,
+        httponly=False,  # Must be False for CSRF token
+        samesite="Lax",
+    )
+
+    return response
