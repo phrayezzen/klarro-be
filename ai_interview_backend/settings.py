@@ -240,8 +240,6 @@ CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
 if not DEBUG:
     # HTTPS settings
     SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_DOMAIN = ".klarro.ai"
-    CSRF_COOKIE_SAMESITE = "None"
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = True
 
