@@ -185,22 +185,28 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 APPEND_SLASH = False
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Vite dev server
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",  # Vite dev server (alternative port)
-    "http://127.0.0.1:5174",
-    "https://f157-67-245-144-91.ngrok-free.app",  # Ngrok URL
-    "https://a3ac-67-245-144-91.ngrok-free.app",  # New ngrok URL
-    "https://app.klarro.ai",  # Production domain
-    "http://app.klarro.ai",  # Production domain (non-HTTPS)
-]
-
-# CSRF settings
-CSRF_TRUSTED_ORIGINS = [
-    "https://app.klarro.ai",  # Production domain
-    "http://app.klarro.ai",  # Production domain (non-HTTPS)
-]
+if DEBUG:
+    # Development settings
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:5173",  # Vite dev server
+        "http://127.0.0.1:5173",  # Vite dev server alternative
+    ]
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:5173",  # Vite dev server
+        "http://127.0.0.1:5173",  # Vite dev server alternative
+    ]
+else:
+    # Production settings
+    CORS_ALLOWED_ORIGINS = [
+        "https://app.klarro.ai",  # Production domain
+        "https://klarro.ai",
+        "https://www.klarro.ai",
+    ]
+    CSRF_TRUSTED_ORIGINS = [
+        "https://app.klarro.ai",  # Production domain
+        "https://klarro.ai",
+        "https://www.klarro.ai",
+    ]
 
 # CSRF Cookie settings
 CSRF_COOKIE_DOMAIN = ".klarro.ai"  # Allow subdomains
@@ -244,9 +250,7 @@ if not DEBUG:
     # HTTPS settings
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = True
-
-    # HSTS settings
+    SECURE_SSL_REDIRECT = True  # Redirect all HTTP to HTTPS
     SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_PRELOAD = True
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True

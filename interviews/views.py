@@ -227,17 +227,10 @@ class InterviewViewSet(viewsets.ModelViewSet):
 @permission_classes([IsAuthenticated])
 def get_current_user(request):
     """Get the current authenticated user's data."""
-    print("get_current_user called")
-    print("User:", request.user)
-    print("Auth header:", request.headers.get("Authorization"))
     try:
         serializer = RecruiterSerializer(request.user.recruiter)
-        print("Serialized data:", serializer.data)
-        response = Response(serializer.data)
-        print("Response created:", response)
-        return response
+        return Response(serializer.data)
     except Exception as e:
-        print("Error in get_current_user:", str(e))
         raise
 
 
@@ -336,7 +329,6 @@ def send_message(request):
 
     except Exception as e:
         error_message = f"Error processing your request: {str(e)}"
-        print(f"Error in send_message: {str(e)}")
 
         # Add error message to chat
         messages = request.session.get("messages", [])
@@ -423,7 +415,6 @@ def text_to_speech(request):
     except ValueError as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        print(f"Error in text_to_speech view: {str(e)}")
         return Response(
             {"error": "Failed to convert text to speech"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
