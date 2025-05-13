@@ -1,5 +1,6 @@
 from asgiref.sync import async_to_sync, sync_to_async
 from django.db import models
+from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -432,4 +433,5 @@ def text_to_speech(request):
 @permission_classes([AllowAny])
 def get_csrf_token(request):
     """Get a CSRF token cookie."""
+    get_token(request)  # This will set the CSRF cookie
     return Response({"detail": "CSRF cookie set"})
