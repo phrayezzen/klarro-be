@@ -10,3 +10,15 @@ repos:
     hooks:
       - id: isort
         args: ["--profile", "black"]
+
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.3.1
+    hooks:
+      - id: autoflake
+        args: [
+            "--remove-all-unused-imports",
+            "--recursive",
+            "--remove-unused-variables",
+            "--in-place",
+            "--exclude=__init__.py",
+        ]

@@ -4,7 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from ..models import Candidate, Company, Flow, Interview, Recruiter, Step
+from ..models import Candidate, Company, Flow, Recruiter, Step
 
 
 class APITests(TestCase):

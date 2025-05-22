@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from django.test import TestCase
-from rest_framework import status
 from rest_framework.test import APIClient
 
 from interviews.models import Candidate, Company, Flow, Interview, Step

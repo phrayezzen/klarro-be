@@ -1,7 +1,5 @@
 from rest_framework import permissions
 
-from .models import Candidate, Company, Interview, Step
-
 
 class IsCompanyAdmin(permissions.BasePermission):
     """Check if the user is an admin of the company."""

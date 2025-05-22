@@ -2,9 +2,6 @@ import json
 
 import openai
 from celery import shared_task
-from django.conf import settings
-
-from interviews.models import Candidate, Interview
 
 
 @shared_task

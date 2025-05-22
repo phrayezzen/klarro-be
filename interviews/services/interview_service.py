@@ -1,11 +1,11 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from django.conf import settings
 from django.db.models import Q
 from openai import AsyncOpenAI, OpenAI
 
-from ..models import Flow, Interview, Step
+from ..models import Flow, Step
 from .tts_service import text_to_speech
 
 # Initialize OpenAI client

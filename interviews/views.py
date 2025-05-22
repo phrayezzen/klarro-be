@@ -1,14 +1,11 @@
-from asgiref.sync import async_to_sync, sync_to_async
-from django.conf import settings
-from django.db import models
+from asgiref.sync import async_to_sync
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.views.decorators.http import require_http_methods
-from rest_framework import filters, permissions, status, viewsets
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
@@ -22,7 +19,7 @@ from .serializers import (
     RecruiterSerializer,
     StepSerializer,
 )
-from .services.ai_service import get_flow_details, handle_message, summarize_candidate
+from .services.ai_service import get_flow_details, handle_message
 from .services.interview_service import generate_interview_response
 from .services.tts_service import text_to_speech as convert_to_speech
 
@@ -132,7 +129,7 @@ class FlowViewSet(viewsets.ModelViewSet):
             instance = self.get_object()
             serializer = self.get_serializer(instance)
             return Response(serializer.data)
-        except Exception as e:
+        except Exception:
             raise
 
 
@@ -167,7 +164,7 @@ class CandidateViewSet(viewsets.ModelViewSet):
             instance = self.get_object()
             serializer = self.get_serializer(instance)
             return Response(serializer.data)
-        except Exception as e:
+        except Exception:
             raise
 
 
@@ -229,7 +226,7 @@ def get_current_user(request):
     try:
         serializer = RecruiterSerializer(request.user.recruiter)
         return Response(serializer.data)
-    except Exception as e:
+    except Exception:
         raise
 
 
@@ -413,7 +410,7 @@ def text_to_speech(request):
         return Response({"audio": {"format": audio_format, "data": audio_base64}})
     except ValueError as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    except Exception as e:
+    except Exception:
         return Response(
             {"error": "Failed to convert text to speech"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,

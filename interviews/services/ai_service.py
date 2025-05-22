@@ -1,8 +1,6 @@
 import json
-import os
-import re
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import openai
 from asgiref.sync import sync_to_async
@@ -289,7 +287,7 @@ async def generate_flow(
                 messages=[{"role": "user", "content": "test"}],
                 max_tokens=5,
             )
-        except Exception as test_error:
+        except Exception:
             raise
 
         # Prepare the prompt
@@ -414,7 +412,7 @@ async def get_flow_details(role_name: str) -> List[str]:
         questions = response.choices[0].message.content.split("\n")
         return [q.strip() for q in questions if q.strip()]
 
-    except Exception as e:
+    except Exception:
         return [
             "Could you provide more details about the role requirements?",
             "What are the key skills and qualifications needed?",
@@ -527,7 +525,7 @@ async def handle_message(
                 temperature=0.7,
                 max_tokens=1000,
             )
-        except Exception as api_error:
+        except Exception:
             raise
 
         # Parse the response
@@ -606,7 +604,7 @@ async def handle_message(
                     )
                     return summary, None, None, redirect_url
 
-            except Exception as e:
+            except Exception:
                 raise
 
         return message.content, None, None, None

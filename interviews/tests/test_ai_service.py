@@ -3,21 +3,14 @@ import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from asgiref.sync import sync_to_async
 from django.contrib.auth.models import User
-from django.test import TestCase, TransactionTestCase
+from django.test import TransactionTestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from interviews.models import Candidate, Company, Flow, Recruiter, Step
-from interviews.services.ai_service import (
-    create_flow_prompt,
-    generate_flow,
-    get_flow_details,
-    get_flow_details_prompt,
-    handle_message,
-)
+from interviews.services.ai_service import generate_flow
 
 
 class AIServiceIntegrationTests(TransactionTestCase):
