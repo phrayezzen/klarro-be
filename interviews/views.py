@@ -22,7 +22,7 @@ from .serializers import (
     RecruiterSerializer,
     StepSerializer,
 )
-from .services.ai_service import handle_message
+from .services.ai_service import handle_message, summarize_candidate
 from .services.interview_service import generate_interview_response
 from .services.tts_service import text_to_speech as convert_to_speech
 
@@ -443,3 +443,91 @@ def get_csrf_token(request):
     )
 
     return response
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def save_interview_transcript(request):
+    """Save the interview transcript and update interview status."""
+    try:
+        flow_id = request.data.get("flowId")
+        transcript = request.data.get("transcript", [])
+
+        if not flow_id or not transcript:
+            return Response(
+                {"error": "Flow ID and transcript are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Get the flow
+        try:
+            flow = Flow.objects.get(id=flow_id)
+        except Flow.DoesNotExist:
+            return Response(
+                {"error": "Flow not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Get or create the interview
+        interview, created = Interview.objects.get_or_create(
+            flow=flow,
+            interviewer=request.user.recruiter,
+            defaults={
+                "status": "completed",
+                "completed_at": timezone.now(),
+            },
+        )
+
+        # Update interview with transcript
+        interview.transcript = "\n".join(
+            [f"{msg['role']}: {msg['content']}" for msg in transcript]
+        )
+        interview.status = "completed"
+        interview.completed_at = timezone.now()
+        interview.save()
+
+        return Response({"status": "success"})
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def evaluate_interview(request):
+    """Trigger the interview evaluation process."""
+    try:
+        flow_id = request.data.get("flowId")
+
+        if not flow_id:
+            return Response(
+                {"error": "Flow ID is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Get the flow
+        try:
+            flow = Flow.objects.get(id=flow_id)
+        except Flow.DoesNotExist:
+            return Response(
+                {"error": "Flow not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Get the interview
+        try:
+            interview = Interview.objects.get(
+                flow=flow, interviewer=request.user.recruiter, status="completed"
+            )
+        except Interview.DoesNotExist:
+            return Response(
+                {"error": "Interview not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Trigger evaluation asynchronously
+        from .tasks import evaluate_interview_task
+
+        evaluate_interview_task.delay(interview.id)
+
+        return Response({"status": "evaluation_started"})
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

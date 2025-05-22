@@ -9,6 +9,7 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from .storage import CandidateProfilePictureStorage, CandidateResumeStorage
+from .tasks import evaluate_resume_task
 
 
 class Company(models.Model):
@@ -237,3 +238,14 @@ def update_candidate_status_on_save(sender, instance, **kwargs):
 def update_candidate_status_on_delete(sender, instance, **kwargs):
     if instance.candidate:
         instance.candidate.update_status()
+
+
+@receiver(post_save, sender=Candidate)
+def evaluate_resume_on_upload(sender, instance, **kwargs):
+    """Trigger resume evaluation when a resume is uploaded."""
+    if (
+        instance.resume
+        and not instance.experience_score
+        and not instance.education_score
+    ):
+        evaluate_resume_task.delay(instance.id)

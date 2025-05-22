@@ -9,10 +9,12 @@ from .views import (
     InterviewViewSet,
     RecruiterViewSet,
     StepViewSet,
+    evaluate_interview,
     get_chat_updates,
     get_csrf_token,
     get_current_user,
     interview_respond,
+    save_interview_transcript,
     send_message,
     text_to_speech,
 )
@@ -34,4 +36,10 @@ urlpatterns = [
     path("api/v1/interview/respond/", interview_respond, name="interview-respond"),
     path("api/v1/interview/tts/", text_to_speech, name="text-to-speech"),
     path("api/v1/csrf/", get_csrf_token, name="csrf-token"),
+    path(
+        "api/v1/interviews/save-transcript/",
+        save_interview_transcript,
+        name="save-transcript",
+    ),
+    path("api/v1/interviews/evaluate/", evaluate_interview, name="evaluate-interview"),
 ]
