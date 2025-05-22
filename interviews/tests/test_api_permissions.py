@@ -116,10 +116,13 @@ class APIPermissionTests(TestCase):
         # Test creating step
         new_step_data = {
             "name": "New Step",
-            "step_type": "technical",
+            "type": "technical",
             "duration_minutes": 60,
             "order": 2,
             "interviewer_tone": "professional",
+            "description": "",
+            "assessed_skills": [],
+            "custom_questions": [],
         }
         response = self.client.post(
             f"/api/v1/flows/{self.flow1.id}/steps/", new_step_data
@@ -142,6 +145,7 @@ class APIPermissionTests(TestCase):
             "first_name": "Test",
             "last_name": "Candidate",
             "email": "test@example.com",
+            "flow_id": self.flow1.id,
         }
         response = self.client.post("/api/v1/candidates/", new_candidate_data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -178,9 +182,13 @@ class APIPermissionTests(TestCase):
         # Test filtering candidates
         response = self.client.get("/api/v1/candidates/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 0)  # No candidates yet
+        # Use paginated results
+        candidates = [
+            c for c in response.data["results"] if c["flow_id"] == self.flow1.id
+        ]
+        self.assertEqual(len(candidates), 1)  # One candidate from setUp
 
         # Test filtering interviews
         response = self.client.get("/api/v1/interviews/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 0)  # No interviews yet
+        self.assertEqual(len(response.data["results"]), 1)  # One interview from setUp

@@ -22,7 +22,7 @@ from .serializers import (
     RecruiterSerializer,
     StepSerializer,
 )
-from .services.ai_service import handle_message, summarize_candidate
+from .services.ai_service import get_flow_details, handle_message, summarize_candidate
 from .services.interview_service import generate_interview_response
 from .services.tts_service import text_to_speech as convert_to_speech
 
@@ -46,11 +46,13 @@ class StepViewSet(viewsets.ModelViewSet):
         return queryset.filter(flow__company_id=self.request.user.recruiter.company_id)
 
     def perform_create(self, serializer):
-        flow_id = self.request.data.get("flow")
-        flow = Flow.objects.get(id=flow_id)
+        flow_id = self.kwargs.get("flow_pk") or self.request.data.get("flow")
+        if not flow_id:
+            raise PermissionDenied("Flow ID is required")
+        flow = get_object_or_404(Flow, id=flow_id)
         if flow.company_id != self.request.user.recruiter.company_id:
             raise PermissionDenied("You can only create steps for your company's flows")
-        serializer.save()
+        serializer.save(flow=flow)
 
 
 class RecruiterViewSet(viewsets.ModelViewSet):
@@ -147,11 +149,8 @@ class CandidateViewSet(viewsets.ModelViewSet):
         flow_id = self.request.query_params.get("flow_id")
         if flow_id:
             queryset = queryset.filter(flow_id=flow_id)
-        # Only filter by company if the candidate has a flow assigned
-        return queryset.filter(
-            models.Q(flow__company_id=self.request.user.recruiter.company_id)
-            | models.Q(flow__isnull=True)
-        )
+        # Only return candidates that belong to the user's company
+        return queryset.filter(flow__company_id=self.request.user.recruiter.company_id)
 
     def get_object(self):
         return super().get_object()
@@ -177,7 +176,7 @@ class InterviewViewSet(viewsets.ModelViewSet):
 
     queryset = Interview.objects.all()
     serializer_class = InterviewSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsRecruiter, IsCompanyMember]
 
     def get_queryset(self):
         """Get interviews for the current user."""
@@ -531,3 +530,14 @@ def evaluate_interview(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def get_flow_details(request):
+    """Return additional questions needed for flow creation."""
+    role_name = request.data.get("role_name")
+    if not role_name:
+        return Response({"error": "role_name is required"}, status=400)
+    questions = get_flow_details(role_name)
+    return Response({"questions": questions})

@@ -3,7 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import Candidate, Company, Flow, Interview, Recruiter, Step
+from ..models import Candidate, Company, Flow, Interview, Recruiter, Step
 
 
 class FlowAPITests(APITestCase):
@@ -26,8 +26,11 @@ class FlowAPITests(APITestCase):
         self.flow = Flow.objects.create(
             company=self.company,
             recruiter=self.recruiter,
-            name="Test Flow",
-            description="Test Flow Description",
+            role_name="Test Flow",
+            role_description="Test Flow Description",
+            role_function="engineering_data",
+            location="San Francisco, CA",
+            is_remote_allowed=True,
         )
 
         # Create test steps
@@ -55,13 +58,16 @@ class FlowAPITests(APITestCase):
         url = reverse("flow-list")
         data = {
             "company": self.company.id,
-            "name": "New Flow",
-            "description": "New Flow Description",
+            "role_name": "New Flow",
+            "role_description": "New Flow Description",
+            "role_function": "engineering_data",
+            "location": "San Francisco, CA",
+            "is_remote_allowed": True,
         }
         response = self.client.post(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Flow.objects.count(), 2)
-        self.assertEqual(Flow.objects.get(id=response.data["id"]).name, "New Flow")
+        self.assertEqual(Flow.objects.get(id=response.data["id"]).role_name, "New Flow")
         self.assertEqual(
             Flow.objects.get(id=response.data["id"]).recruiter, self.recruiter
         )
@@ -89,6 +95,10 @@ class FlowAPITests(APITestCase):
             "step_type": "system_design",
             "duration_minutes": 45,
             "order": 3,
+            "description": "System design step",
+            "interviewer_tone": "professional",
+            "assessed_skills": [],
+            "custom_questions": [],
         }
         response = self.client.post(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -197,6 +207,10 @@ class FlowAPITests(APITestCase):
             "step_type": "invalid_type",
             "duration_minutes": 30,
             "order": 3,
+            "description": "Invalid step type",
+            "interviewer_tone": "professional",
+            "assessed_skills": [],
+            "custom_questions": [],
         }
         response = self.client.post(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

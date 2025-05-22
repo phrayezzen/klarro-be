@@ -312,6 +312,19 @@ async def generate_flow(
         # Parse the response
         message = response.choices[0].message
 
+        # Handle tool calls (e.g., request_more_details)
+        if hasattr(message, "tool_calls") and message.tool_calls:
+            for tool_call in message.tool_calls:
+                function = getattr(tool_call, "function", None)
+                if (
+                    function
+                    and getattr(function, "name", None) == "request_more_details"
+                ):
+                    args = json.loads(function.arguments)
+                    return None, FlowDetails(
+                        context=args["context"], questions=args["questions"]
+                    )
+
         try:
             # Parse the response into an InterviewFlow object
             flow_data = json.loads(message.content)

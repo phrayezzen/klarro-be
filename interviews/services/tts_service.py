@@ -1,9 +1,12 @@
 import base64
+import logging
 import os
 from typing import Tuple
 
 import openai
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 def text_to_speech(text: str) -> Tuple[str, str]:
@@ -32,5 +35,5 @@ def text_to_speech(text: str) -> Tuple[str, str]:
 
         return "audio/mpeg", audio_base64
     except Exception as e:
-        print(f"Error in text_to_speech: {str(e)}")
+        logger.error(f"Error in text_to_speech: {str(e)}")
         raise Exception(f"Failed to convert text to speech: {str(e)}")

@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -81,16 +82,6 @@ class APITests(TestCase):
             email="jane@example.com",
         )
 
-        self.interview1 = Interview.objects.create(
-            candidate=self.candidate1,
-            step=self.step1,
-            interviewer=self.recruiter1,
-            status="completed",
-            transcript="Interview transcript here",
-            overall_score=4.5,
-            completed_at="2024-03-20T10:00:00Z",
-        )
-
     def test_authentication_required(self):
         """Test that endpoints require authentication"""
         # Test flow endpoint
@@ -152,11 +143,13 @@ class APITests(TestCase):
         # Test creating a step
         new_step_data = {
             "name": "System Design Interview",
-            "step_type": "technical",
+            "type": "technical",
             "duration_minutes": 90,
             "order": 2,
             "description": "System design interview description",
             "interviewer_tone": "professional",
+            "assessed_skills": [],
+            "custom_questions": [],
         }
         response = self.client.post(
             f"/api/v1/flows/{self.flow1.id}/steps/", new_step_data
@@ -188,17 +181,23 @@ class APITests(TestCase):
         # Test listing interviews
         response = self.client.get("/api/v1/interviews/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data["results"]), 0)  # No interviews yet
+        self.assertEqual(
+            len(response.data["results"]), 0
+        )  # No interviews created in setUp
 
-        # Test creating an interview
+        # Test creating an interview (use candidate1 and step1 from company1)
         interview_data = {
             "candidate": self.candidate1.id,
             "step": self.step1.id,
             "status": "pending",
         }
-        response = self.client.post("/api/v1/interviews/", interview_data)
+        response = self.client.post(
+            reverse("interview-list"),
+            interview_data,
+            format="json",
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        # Test accessing another company's interview
+        # Test accessing the created interview
         response = self.client.get(f"/api/v1/interviews/{response.data['id']}/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)

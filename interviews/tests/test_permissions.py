@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework import status
+from rest_framework.request import Request
 from rest_framework.test import APIClient, APIRequestFactory
 from rest_framework.views import APIView
 
@@ -76,42 +77,42 @@ class PermissionTests(TestCase):
         permission = IsCompanyMember()
 
         # Test list/create permission with company_id
-        request = self.factory.get("/", {"company_id": self.company1.id})
-        request.user = self.user1
-        self.assertTrue(permission.has_permission(request, self.view))
+        drf_request = Request(self.factory.get("/", {"company_id": self.company1.id}))
+        drf_request.user = self.user1
+        self.assertTrue(permission.has_permission(drf_request, self.view))
 
-        request = self.factory.get("/", {"company_id": self.company2.id})
-        request.user = self.user1
-        self.assertFalse(permission.has_permission(request, self.view))
+        drf_request = Request(self.factory.get("/", {"company_id": self.company2.id}))
+        drf_request.user = self.user1
+        self.assertFalse(permission.has_permission(drf_request, self.view))
 
         # Test object permission for Company
-        request = self.factory.get("/")
-        request.user = self.user1
+        drf_request = Request(self.factory.get("/"))
+        drf_request.user = self.user1
         self.assertTrue(
-            permission.has_object_permission(request, self.view, self.company1)
+            permission.has_object_permission(drf_request, self.view, self.company1)
         )
         self.assertFalse(
-            permission.has_object_permission(request, self.view, self.company2)
+            permission.has_object_permission(drf_request, self.view, self.company2)
         )
 
         # Test object permission for Flow
         self.assertTrue(
-            permission.has_object_permission(request, self.view, self.flow1)
+            permission.has_object_permission(drf_request, self.view, self.flow1)
         )
 
         # Test object permission for Step
         self.assertTrue(
-            permission.has_object_permission(request, self.view, self.step1)
+            permission.has_object_permission(drf_request, self.view, self.step1)
         )
 
         # Test object permission for Candidate
         self.assertTrue(
-            permission.has_object_permission(request, self.view, self.candidate1)
+            permission.has_object_permission(drf_request, self.view, self.candidate1)
         )
 
         # Test object permission for Interview
         self.assertTrue(
-            permission.has_object_permission(request, self.view, self.interview1)
+            permission.has_object_permission(drf_request, self.view, self.interview1)
         )
 
     def test_is_flow_owner_permission(self):
@@ -182,7 +183,7 @@ class IsCompanyAdminTestCase(TestCase):
             role_description="Test Description",
             role_function="engineering_data",
         )
-        url = f"/api/flows/{flow.id}/"
+        url = f"/api/v1/flows/{flow.id}/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -196,7 +197,7 @@ class IsCompanyAdminTestCase(TestCase):
             role_description="Test Description",
             role_function="engineering_data",
         )
-        url = f"/api/flows/{flow.id}/"
+        url = f"/api/v1/flows/{flow.id}/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -230,7 +231,7 @@ class IsRecruiterTestCase(TestCase):
             role_description="Test Description",
             role_function="engineering_data",
         )
-        url = f"/api/flows/{flow.id}/"
+        url = f"/api/v1/flows/{flow.id}/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -244,7 +245,7 @@ class IsRecruiterTestCase(TestCase):
             role_description="Test Description",
             role_function="engineering_data",
         )
-        url = f"/api/flows/{flow.id}/"
+        url = f"/api/v1/flows/{flow.id}/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -276,7 +277,7 @@ class IsCompanyMemberTestCase(TestCase):
             role_description="Test Description",
             role_function="engineering_data",
         )
-        url = f"/api/flows/{flow.id}/"
+        url = f"/api/v1/flows/{flow.id}/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -290,6 +291,6 @@ class IsCompanyMemberTestCase(TestCase):
             role_description="Test Description",
             role_function="engineering_data",
         )
-        url = f"/api/flows/{flow.id}/"
+        url = f"/api/v1/flows/{flow.id}/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

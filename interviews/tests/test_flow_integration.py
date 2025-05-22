@@ -40,7 +40,6 @@ class FlowIntegrationTest(TestCase):
         url = "/api/v1/flows/"
         data = {
             "company": self.company.id,
-            "recruiter": self.recruiter.id,
             "role_name": "Test Flow",
             "role_description": "Test Description",
             "role_function": "engineering_data",
@@ -50,7 +49,7 @@ class FlowIntegrationTest(TestCase):
                 {
                     "name": "Initial Screening",
                     "description": "Initial screening interview",
-                    "step_type": "behavioral",
+                    "type": "behavioral",
                     "duration_minutes": 30,
                     "order": 1,
                     "interviewer_tone": "professional",
@@ -58,7 +57,7 @@ class FlowIntegrationTest(TestCase):
                 {
                     "name": "Technical Assessment",
                     "description": "Technical skills assessment",
-                    "step_type": "technical",
+                    "type": "technical",
                     "duration_minutes": 60,
                     "order": 2,
                     "interviewer_tone": "professional",
@@ -80,7 +79,7 @@ class FlowIntegrationTest(TestCase):
                 {
                     "name": "Updated Screening",
                     "description": "Updated screening interview",
-                    "step_type": "behavioral",
+                    "type": "behavioral",
                     "duration_minutes": 45,
                     "order": 1,
                     "interviewer_tone": "professional",
@@ -96,7 +95,7 @@ class FlowIntegrationTest(TestCase):
         """Test creating a candidate for a flow."""
         url = "/api/v1/candidates/"
         data = {
-            "flow": self.flow.id,
+            "flow_id": self.flow.id,
             "first_name": "John",
             "last_name": "Doe",
             "email": "test@example.com",

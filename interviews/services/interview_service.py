@@ -1,14 +1,17 @@
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from django.conf import settings
 from django.db.models import Q
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 
 from ..models import Flow, Interview, Step
 from .tts_service import text_to_speech
 
 # Initialize OpenAI client
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
+logger = logging.getLogger(__name__)
 
 
 def get_current_step(flow: Flow, conversation_history: List[Dict]) -> Optional[Step]:
@@ -32,7 +35,7 @@ def get_current_step(flow: Flow, conversation_history: List[Dict]) -> Optional[S
     ).first()
 
 
-def generate_interview_response(
+async def generate_interview_response(
     user_message: str, flow: Flow, conversation_history: List[Dict]
 ) -> Dict[str, Any]:
     """Generate an interview response using OpenAI."""
@@ -65,31 +68,17 @@ def generate_interview_response(
         # Add user message
         messages.append({"role": "user", "content": user_message})
 
-        print("\nSending request to OpenAI:")
-        print(f"Model: gpt-4")
-        print(f"Temperature: 0.7")
-        print(f"Max tokens: 500")
-        print("\nMessages:")
-        for msg in messages:
-            print(f"\nRole: {msg['role']}")
-            print(
-                f"Content: {msg['content'][:200]}..."
-            )  # Print first 200 chars of each message
-
         # Call OpenAI API
         try:
-            response = client.chat.completions.create(
-                model="gpt-4", messages=messages, temperature=0.7, max_tokens=500
+            response = await client.chat.completions.create(
+                model="gpt-4",
+                temperature=0.7,
+                max_tokens=500,
+                messages=messages,
             )
-            print("\nReceived response from OpenAI:")
-            print(
-                f"Response content: {response.choices[0].message.content[:200]}..."
-            )  # Print first 200 chars of response
+            return response.choices[0].message.content
         except Exception as api_error:
-            print("\nOpenAI API Error:")
-            print(f"Error type: {type(api_error).__name__}")
-            print(f"Error message: {str(api_error)}")
-            print(f"Error details: {api_error.__dict__}")
+            logger.error(f"OpenAI API Error: {str(api_error)}")
             raise
 
         # Get response text
@@ -105,3 +94,19 @@ def generate_interview_response(
 
     except Exception as e:
         raise Exception(f"Error generating interview response: {str(e)}")
+
+
+async def get_ai_response(messages: List[Dict[str, Any]]) -> str:
+    """Get response from OpenAI API."""
+    client = AsyncOpenAI()
+    try:
+        response = await client.chat.completions.create(
+            model="gpt-4",
+            temperature=0.7,
+            max_tokens=500,
+            messages=messages,
+        )
+        return response.choices[0].message.content
+    except Exception as api_error:
+        logger.error(f"OpenAI API Error: {str(api_error)}")
+        raise

@@ -1,5 +1,7 @@
 from rest_framework import permissions
 
+from .models import Candidate, Company, Interview, Step
+
 
 class IsCompanyAdmin(permissions.BasePermission):
     """Check if the user is an admin of the company."""
@@ -56,6 +58,12 @@ class IsRecruiter(permissions.BasePermission):
             is_recruiter = company.recruiters.filter(
                 id=request.user.recruiter.id
             ).exists()
+        elif hasattr(obj, "candidate") and hasattr(obj.candidate, "flow"):
+            # Special case for Interview objects
+            company = obj.candidate.flow.company
+            is_recruiter = company.recruiters.filter(
+                id=request.user.recruiter.id
+            ).exists()
         else:
             is_recruiter = False
 
@@ -89,11 +97,20 @@ class IsCompanyMember(permissions.BasePermission):
         return True
 
     def has_object_permission(self, request, view, obj):
-        # Get the company ID from the object
+        from .models import Candidate, Company, Interview, Step
+
         if hasattr(obj, "company_id"):
             obj_company_id = obj.company_id
         elif hasattr(obj, "flow") and obj.flow:
             obj_company_id = obj.flow.company_id
+        elif isinstance(obj, Company):
+            obj_company_id = obj.id
+        elif isinstance(obj, Step):
+            obj_company_id = obj.flow.company_id
+        elif isinstance(obj, Candidate):
+            obj_company_id = obj.flow.company_id
+        elif isinstance(obj, Interview):
+            obj_company_id = obj.candidate.flow.company_id
         else:
             return False
 

@@ -9,7 +9,6 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from .storage import CandidateProfilePictureStorage, CandidateResumeStorage
-from .tasks import evaluate_resume_task
 
 
 class Company(models.Model):
@@ -224,7 +223,7 @@ class Interview(models.Model):
         ]  # A candidate can only do each step once
 
     def __str__(self):
-        return f"{self.step.name} Interview of {self.candidate} for {self.flow}"
+        return f"{self.step.name} Interview of {self.candidate} for {self.step.flow}"
 
 
 # --- SIGNALS ---
@@ -243,6 +242,8 @@ def update_candidate_status_on_delete(sender, instance, **kwargs):
 @receiver(post_save, sender=Candidate)
 def evaluate_resume_on_upload(sender, instance, **kwargs):
     """Trigger resume evaluation when a resume is uploaded."""
+    from .tasks import evaluate_resume_task
+
     if (
         instance.resume
         and not instance.experience_score

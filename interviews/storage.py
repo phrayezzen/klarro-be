@@ -50,22 +50,15 @@ class CandidateResumeStorage(FileSystemStorage):
         Return the URL for the file.
         This can be overridden to support different storage backends.
         """
-        print("=== Storage URL Debug ===")
-        print(f"Input name: {name}")
-        print(f"MEDIA_URL from settings: {settings.MEDIA_URL}")
-
         if not name:
-            print("No name provided, returning empty string")
             return ""
 
-        # Remove any leading slashes to avoid double slashes
-        name = name.lstrip("/")
-        print(f"Name after lstrip: {name}")
+        # Remove leading slash if present
+        if name.startswith("/"):
+            name = name.lstrip("/")
 
         # Return the URL without the MEDIA_URL prefix since it's already included in the path
         final_url = f"/{name}"
-        print(f"Final URL: {final_url}")
-        print("=====================")
         return final_url
 
     def delete(self, name):
@@ -115,3 +108,16 @@ class CandidateProfilePictureStorage(FileSystemStorage):
             new_name = f"{date_path}/{filename}_{counter}{ext}"
 
         return new_name
+
+
+def get_storage_url(name: str) -> str:
+    """Get the full URL for a stored file."""
+    if not name:
+        return ""
+
+    # Remove leading slash if present
+    if name.startswith("/"):
+        name = name.lstrip("/")
+
+    # Combine MEDIA_URL with the file name
+    return f"{settings.MEDIA_URL}{name}"
